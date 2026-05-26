@@ -1,0 +1,11 @@
+<svg viewBox="0 0 400 120" xmlns="http://www.w3.org/2000/svg">
+    <g transform="translate(10, 10)">
+        <rect x="0" y="0" width="100" height="100" rx="30" fill="#1FA463"/>
+        <path d="M 32 25 L 32 75 M 32 35 C 55 25, 75 35, 65 55 C 55 70, 32 60, 32 55" stroke="#FFFFFF" stroke-width="9" stroke-linecap="round" fill="none"/>
+        <circle cx="70" cy="65" r="18" fill="#1FA463"/>
+        <circle cx="70" cy="65" r="16" fill="#FFFFFF"/>
+        <path d="M 62 65 L 68 71 L 78 58" stroke="#1FA463" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+    </g>
+    <text x="130" y="68" font-family="Poppins, sans-serif" font-weight="700" font-size="64" letter-spacing="-2" fill="#0F5C3B">moneyed</text>
+    <text x="135" y="95" font-family="Poppins, sans-serif" font-weight="600" font-size="14" letter-spacing="4" fill="#6FBF9F">YOUR MONEY • YOUR FUTURE</text>
+</svg>

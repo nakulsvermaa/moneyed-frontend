@@ -1,0 +1,37 @@
+moneyed - Brand Palette & Colorways
+====================================
+Symbol: a CLIMBING TURTLE (ascending) with a check badge - steady, trusted,
+upward financial growth. ("Your Money . Your Future")
+
+CORE COLORS
+  Deep Green     #085C3A   rgb(8, 92, 58)      Primary brand
+  Bright Green   #18C979   rgb(24, 201, 121)   Accent / bright tile / check badge
+  Mint Green     #A9E7CE   rgb(169, 231, 206)  Fresh accent
+  Mint BG        #F0FFFA   rgb(240, 255, 250)  Fresh background
+  Warm Yellow    #E9E4A0   rgb(233, 228, 160)  Earthy accent
+  Cream BG       #FFFDF0   rgb(255, 253, 240)  Earthy background
+  Muted Green    #2E7B4F   rgb(46, 123, 79)    Earthy tile
+  White          #FFFFFF                        Clean
+
+COLORWAYS (4)
+  1. DEEP GREEN . PRIMARY   deep-green bg, bright-green tile, white wordmark
+  2. MINT GREEN . FRESH     mint bg, deep-green tile, deep wordmark
+  3. WHITE . CLEAN          white bg, deep-green tile, deep wordmark
+  4. WARM YELLOW . EARTHY   cream bg, muted-green tile (yellow badge), deep wordmark
+
+TYPEFACE
+  Poppins (Bold = "moneyed", SemiBold = tagline). Outlined to vector paths in
+  all SVGs, so it renders identically without the font installed.
+
+FILES
+  moneyed_brand_sheet.svg/.png            All 4 colorways on one sheet
+  moneyed_card_deep_green_primary.svg/.png
+  moneyed_card_mint_green_fresh.svg/.png
+  moneyed_card_white_clean.svg/.png
+  moneyed_card_warm_yellow_earthy.svg/.png
+
+  (logo + icon files were delivered earlier: moneyed_logo_primary, _dark, icons)
+
+USAGE
+  Prefer SVGs (infinitely scalable). Keep clear space around the logo.
+  Do not stretch, rotate, or recolor the turtle mark.

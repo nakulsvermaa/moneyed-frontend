@@ -1,0 +1,1386 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>moneyed | Premium Personal Finance & Loan Structuring</title>
+    <meta name="description" content="Structure your debt, check loan eligibility across top Indian lenders, optimize interest rates, and analyze your CIBIL score. 15 years of loan expertise.">
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <!-- FontAwesome for Premium Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Chart.js for Doughnut Analytics -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- SheetJS for Excel Export -->
+    <script src="https://cdn.sheetjs.com/xlsx-latest/package/dist/xlsx.full.min.js"></script>
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="style.css">
+    <!-- Firebase Core JS SDK (For Database Launch) -->
+    <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-database-compat.js"></script>
+</head>
+<body class="theme-deep-green">
+    <div class="app-container">
+        <!-- Sidebar Navigation -->
+        <aside class="sidebar" id="app-sidebar">
+            <div class="sidebar-header">
+                <div class="logo-container" id="desktop-sidebar-toggle" style="cursor: pointer; position: relative;">
+                    <div class="logo-icon">
+                        <svg viewBox="0 0 100 100" class="logo-svg" style="height: 40px; width: 40px; display: block;">
+                            <rect x="0" y="0" width="100" height="100" rx="25" fill="var(--logo-icon-bg)"/>
+                            <path d="M 26 70 V 42 C 26 28, 46 28, 46 42 V 70 M 46 45 C 46 28, 66 28, 66 42 V 52" stroke="var(--logo-icon-fg)" stroke-width="8" stroke-linecap="round" fill="none"/>
+                            <circle cx="70" cy="65" r="18" fill="var(--logo-icon-bg)"/>
+                            <circle cx="70" cy="65" r="15" fill="var(--logo-icon-fg)"/>
+                            <path d="M 62 65 L 68 71 L 78 58" stroke="var(--logo-icon-bg)" stroke-width="4.5" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+                        </svg>
+                    </div>
+                    <div class="logo-text">
+                        <span class="brand-name">moneyed</span>
+                        <span class="brand-tagline">YOUR MONEY • YOUR FUTURE</span>
+                    </div>
+                    <div class="sidebar-toggle-btn">
+                        <i class="fa-solid fa-chevron-left"></i>
+                    </div>
+                </div>
+            </div>
+            
+            <nav class="sidebar-menu">
+                <ul class="nav-list">
+                    <li class="nav-item active" data-tab="home-tab">
+                        <a href="#" class="nav-link"><i class="fa-solid fa-house"></i><span>Home / Overview</span></a>
+                    </li>
+                    <li class="nav-item" data-tab="eligibility-tab">
+                        <a href="#" class="nav-link"><i class="fa-solid fa-clipboard-check"></i><span>Loan Eligibility</span></a>
+                    </li>
+                    <li class="nav-item" data-tab="calculators-tab">
+                        <a href="#" class="nav-link"><i class="fa-solid fa-calculator"></i><span>Calculators Suite</span></a>
+                    </li>
+                    <li class="nav-item" data-tab="cibil-tab">
+                        <a href="#" class="nav-link"><i class="fa-solid fa-chart-line"></i><span>CIBIL Analyzer</span></a>
+                    </li>
+                    <li class="nav-item" data-tab="expenses-tab">
+                        <a href="#" class="nav-link"><i class="fa-solid fa-wallet"></i><span>Expense Tracker</span></a>
+                    </li>
+                    <li class="nav-item" data-tab="ai-coach-tab">
+                        <a href="#" class="nav-link"><i class="fa-solid fa-robot"></i><span>AI Finance Coach</span></a>
+                    </li>
+                    <li class="nav-item" data-tab="booking-tab">
+                        <a href="#" class="nav-link"><i class="fa-solid fa-calendar-days"></i><span>Book Call</span></a>
+                    </li>
+                    <li class="nav-item" data-tab="crm-tab" id="nav-crm-item" style="display: none;">
+                        <a href="#" class="nav-link"><i class="fa-solid fa-briefcase"></i><span>CRM Console</span></a>
+                    </li>
+                </ul>
+            </nav>
+            
+            <div class="sidebar-footer">
+                <ul class="nav-list" style="margin-top: 15px;">
+                    <li class="nav-item" id="login-btn-container" onclick="openLoginModal()" style="cursor: pointer; background: rgba(0,0,0,0.1); border-radius: 8px;">
+                        <a class="nav-link"><i class="fa-brands fa-google text-gold"></i><span>Sign In / Sign Up</span></a>
+                    </li>
+                </ul>
+                <div class="founder-profile margin-top-md">
+                    <div class="profile-avatar">NV</div>
+                    <div class="profile-info">
+                        <p class="profile-name" style="font-size: 13px;">Nakul & Priyanka Verma</p>
+                        <p class="profile-title">Founders & Loan Experts</p>
+                    </div>
+                </div>
+            </div>
+        </aside>
+
+        <!-- Main Content Area -->
+        <main class="main-content">
+            <!-- Top Header Bar -->
+            <header class="top-header">
+                <div class="mobile-toggle" id="sidebar-toggle">
+                    <i class="fa-solid fa-bars"></i>
+                </div>
+                <div class="header-welcome">
+                    <h1 id="page-title">Financial Dashboard</h1>
+                    <p class="header-subtitle">Welcome back to moneyed - Your financial control center.</p>
+                </div>
+                <div class="header-actions">
+                    <button class="btn btn-outline" id="theme-toggle-btn" onclick="toggleTheme()" style="border-radius: 50%; width: 40px; height: 40px; padding: 0; display: flex; justify-content: center; align-items: center; margin-right: 15px;">
+                        <i class="fa-solid fa-moon"></i>
+                    </button>
+                    <div class="cibil-pill shadow-soft">
+                        <i class="fa-solid fa-shield-halved text-gold"></i>
+                        <span>CIBIL Status: </span>
+                        <strong id="topbar-cibil">Uncheck</strong>
+                    </div>
+                    <button class="btn btn-primary" id="topbar-cta" onclick="switchTab('eligibility-tab')">
+                        <i class="fa-solid fa-bolt"></i> Check Eligibility
+                    </button>
+                </div>
+            </header>
+
+            <!-- Active Tab Container -->
+            <div class="tab-content-container" id="tab-container">
+                
+                <!-- 1. HOME / OVERVIEW TAB -->
+                <section class="tab-pane active" id="home-tab">
+                    <div class="welcome-banner">
+                        <div class="banner-body">
+                            <h2>15 Years of Financial Expertise, Now Automated.</h2>
+                            <p>Struggling with high EMI burdens or CIBIL confusion? We structure your debt, optimize interest rates, and match you with the best lenders in India.</p>
+                            <div class="banner-actions">
+                                <button class="btn btn-accent" onclick="switchTab('eligibility-tab')">Check Loan Eligibility</button>
+                                <button class="btn btn-outline-white" onclick="switchTab('ai-coach-tab')">Ask AI Coach</button>
+                            </div>
+                        </div>
+                        <div class="banner-visual">
+                            <i class="fa-solid fa-indian-rupee-sign banner-big-icon animated-rupee"></i>
+                        </div>
+                    </div>
+
+                    <!-- Metrics Grid -->
+                    <div class="grid-3">
+                        <div class="glass-card metric-card">
+                            <div class="card-icon-header">
+                                <div class="metric-icon green-bg"><i class="fa-solid fa-gauge-high"></i></div>
+                                <span class="badge text-green">Real-time Analysis</span>
+                            </div>
+                            <h3>CIBIL Score</h3>
+                            <div class="meter-wrapper">
+                                <div class="cibil-dial">
+                                    <svg viewBox="0 0 100 50" class="dial-svg">
+                                        <path d="M 10 50 A 40 40 0 0 1 90 50" fill="none" stroke="#ddd" stroke-width="8" stroke-linecap="round"/>
+                                        <path d="M 10 50 A 40 40 0 0 1 90 50" fill="none" stroke="var(--brand-green)" stroke-width="8" stroke-linecap="round" id="cibil-dial-fill" stroke-dasharray="126" stroke-dashoffset="126"/>
+                                    </svg>
+                                    <div class="dial-value" id="home-cibil-val">---</div>
+                                </div>
+                            </div>
+                            <p class="metric-desc" id="home-cibil-desc">Run the CIBIL Analyzer to load your active accounts and credit history summary.</p>
+                        </div>
+
+                        <div class="glass-card metric-card">
+                            <div class="card-icon-header">
+                                <div class="metric-icon yellow-bg"><i class="fa-solid fa-scale-balanced"></i></div>
+                                <span class="badge text-yellow" id="home-foir-badge">Pending Input</span>
+                            </div>
+                            <h3>FOIR / Debt Burden</h3>
+                            <div class="foir-visual">
+                                <div class="progress-bar-container">
+                                    <div class="progress-bar-fill" id="home-foir-bar" style="width: 0%"></div>
+                                </div>
+                                <div class="foir-stats">
+                                    <span class="foir-val" id="home-foir-val">0%</span>
+                                    <span class="foir-limit">Ideal: <40%</span>
+                                </div>
+                            </div>
+                            <p class="metric-desc" id="home-foir-desc">FOIR measures how much of your monthly income goes into paying fixed liabilities like rent & EMIs.</p>
+                        </div>
+
+                        <div class="glass-card metric-card">
+                            <div class="card-icon-header">
+                                <div class="metric-icon gold-bg"><i class="fa-solid fa-indian-rupee-sign animated-rupee"></i></div>
+                                <span class="badge text-gold">BT Saving</span>
+                            </div>
+                            <h3>Consolidation Opportunity</h3>
+                            <div class="savings-display">
+                                <span class="currency-symbol"><i class="fa-solid fa-indian-rupee-sign"></i></span>
+                                <span class="savings-amount" id="home-savings-val">0</span>
+                            </div>
+                            <p class="metric-desc" id="home-savings-desc">Switch high-interest loans to lower ROI structures. Enter your loans in the calculator to view savings.</p>
+                        </div>
+                    </div>
+
+                    <!-- Founder Trust & Feature Grid -->
+                    <div class="trust-grid">
+                        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px;">
+                            <div class="glass-card trust-card">
+                                <div class="trust-header">
+                                    <div class="avatar-large">NV</div>
+                                    <div>
+                                        <h4>A Note from Nakul Verma</h4>
+                                        <p class="subtitle">Founder, moneyed | 15+ Years in Banking & Loans</p>
+                                    </div>
+                                </div>
+                                <p class="trust-quote">"Over the past 15 years, I've seen thousands of customers pay 3-4% extra interest simply because they didn't know how to structure their debts, or got rejected by top lenders due to small errors in their CIBIL report. moneyed was born to bridge this gap. We combine smart algorithms with personal banking expertise to structure your personal finance and loans so you pay the absolute minimum interest."</p>
+                                <div class="trust-stats">
+                                    <div class="t-stat">
+                                        <h5>15+</h5>
+                                        <span>Years Experience</span>
+                                    </div>
+                                    <div class="t-stat">
+                                        <h5><i class="fa-solid fa-indian-rupee-sign"></i>500Cr+</h5>
+                                        <span>Disbursals Guided</span>
+                                    </div>
+                                    <div class="t-stat">
+                                        <h5>5000+</h5>
+                                        <span>Clients Served</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="glass-card trust-card">
+                                <div class="trust-header">
+                                    <div class="avatar-large" style="background: linear-gradient(135deg, #10b981 0%, #047857 100%);">PV</div>
+                                    <div>
+                                        <h4>A Note from Priyanka Verma</h4>
+                                        <p class="subtitle">Co-Founder, moneyed | 10+ Years in Banking Intelligence</p>
+                                    </div>
+                                </div>
+                                <p class="trust-quote">"With over a decade of deep banking intelligence, I've realized that true financial freedom isn't just about earning more, it's about optimizing what you owe. At moneyed, we're bringing elite financial structuring directly to you. Our mission is to pass on our deep institutional knowledge and intelligence to ensure that you are always one step ahead in your financial journey."</p>
+                                <div class="trust-stats">
+                                    <div class="t-stat">
+                                        <h5>10+</h5>
+                                        <span>Years Experience</span>
+                                    </div>
+                                    <div class="t-stat">
+                                        <h5><i class="fa-solid fa-brain"></i></h5>
+                                        <span>Banking Intelligence</span>
+                                    </div>
+                                    <div class="t-stat">
+                                        <h5><i class="fa-solid fa-shield-halved"></i></h5>
+                                        <span>Risk Mitigation</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="glass-card feature-highlights">
+                            <h4>Why moneyed?</h4>
+                            <ul class="feature-checklist">
+                                <li>
+                                    <i class="fa-solid fa-circle-check text-green"></i>
+                                    <div>
+                                        <strong>Consolidated Debt Advisory</strong>
+                                        <p>Merge credit card dues & multiple costly personal loans into a single low-EMI loan.</p>
+                                    </div>
+                                </li>
+                                <li>
+                                    <i class="fa-solid fa-circle-check text-green"></i>
+                                    <div>
+                                        <strong>Multi-Lender Policy Engine</strong>
+                                        <p>Match your profile with actual criteria of Bajaj, Tata, Axis, Poonawalla, and more.</p>
+                                    </div>
+                                </li>
+                                <li>
+                                    <i class="fa-solid fa-circle-check text-green"></i>
+                                    <div>
+                                        <strong>Compliant & Consent-Driven</strong>
+                                        <p>We respect the DPDP Act. Your financial details are safe, secure, and used only with consent.</p>
+                                    </div>
+                                </li>
+                            </ul>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- 2. LOAN ELIGIBILITY TAB -->
+                <section class="tab-pane" id="eligibility-tab">
+                    <div class="glass-card main-form-card">
+                        <div class="wizard-header">
+                            <h2>Loan Eligibility Check</h2>
+                            <p>Find out which top lenders will approve your loan request instantly based on credit parameters.</p>
+                            <!-- Wizard Steps Indicators -->
+                            <div class="wizard-steps">
+                                <div class="step-indicator active" id="step-ind-1"><span>1</span> Personal</div>
+                                <div class="step-indicator" id="step-ind-2"><span>2</span> Income</div>
+                                <div class="step-indicator" id="step-ind-3"><span>3</span> Credit</div>
+                            </div>
+                        </div>
+
+                        <form id="eligibility-form" onsubmit="event.preventDefault();">
+                            <!-- Wizard Step 1: Personal Details -->
+                            <div class="wizard-step active" id="wizard-step-1">
+                                <div class="form-grid">
+                                    <div class="form-group">
+                                        <label for="elig-name">Full Name *</label>
+                                        <input type="text" id="elig-name" class="form-input" placeholder="e.g. Rahul Sharma" required>
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="elig-phone">Mobile Number *</label>
+                                        <input type="tel" id="elig-phone" class="form-input" placeholder="10-digit number" pattern="[0-9]{10}" required>
+                                    </div>
+                                    <div class="form-group position-relative">
+                                        <label for="elig-city">City *</label>
+                                        <input type="text" id="elig-city" class="form-input" placeholder="Type city name..." autocomplete="off" required>
+                                        <div id="city-autocomplete-list" class="autocomplete-items hidden"></div>
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="elig-emp-type">Employment Type *</label>
+                                        <select id="elig-emp-type" class="form-input" required>
+                                            <option value="">Select Option</option>
+                                            <option value="salaried">Salaried Employee</option>
+                                            <option value="self-employed">Self Employed / Business</option>
+                                        </select>
+                                    </div>
+                                </div>
+                                <div class="wizard-buttons">
+                                    <div></div> <!-- spacer -->
+                                    <button type="button" class="btn btn-primary" onclick="nextWizardStep(2)">Next <i class="fa-solid fa-arrow-right"></i></button>
+                                </div>
+                            </div>
+
+                            <!-- Wizard Step 2: Income & Employment -->
+                            <div class="wizard-step" id="wizard-step-2">
+                                <div class="form-grid">
+                                    <div class="form-group" id="group-income">
+                                        <label for="elig-income" id="label-income">Net Monthly Take-Home (<i class="fa-solid fa-indian-rupee-sign" style="font-size: 0.9em;"></i>) *</label>
+                                        <input type="number" id="elig-income" class="form-input" placeholder="e.g. 75000" min="0" required>
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="elig-company" id="label-company">Company Name *</label>
+                                        <input type="text" id="elig-company" class="form-input" placeholder="e.g. TCS, Infosys" required>
+                                    </div>
+                                    <div class="form-group" id="group-company-cat">
+                                        <label for="elig-company-cat">Employer Category *</label>
+                                        <select id="elig-company-cat" class="form-input">
+                                            <option value="A">Category A (Top Corporate / MNC)</option>
+                                            <option value="B">Category B (Mid Size / Public Ltd)</option>
+                                            <option value="C">Category C (Small Enterprises)</option>
+                                            <option value="D">Others / Proprietary</option>
+                                        </select>
+                                    </div>
+                                    <div class="form-group" id="group-business-type" style="display: none;">
+                                        <label for="elig-business-type">Business Type *</label>
+                                        <select id="elig-business-type" class="form-input">
+                                            <option value="Proprietorship">Proprietorship</option>
+                                            <option value="Partnership">Partnership</option>
+                                            <option value="Pvt Ltd">Pvt Ltd</option>
+                                            <option value="LLP">LLP</option>
+                                        </select>
+                                    </div>
+                                    <div class="form-group" id="group-vintage" style="display: none;">
+                                        <label for="elig-vintage">Business Vintage (Years) *</label>
+                                        <input type="number" id="elig-vintage" class="form-input" placeholder="e.g. 3" min="0">
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="elig-loan-req">Required Loan Amount (<i class="fa-solid fa-indian-rupee-sign" style="font-size: 0.9em;"></i>) *</label>
+                                        <input type="number" id="elig-loan-req" class="form-input" placeholder="e.g. 500000" min="0" required>
+                                    </div>
+                                </div>
+                                <div class="wizard-buttons">
+                                    <button type="button" class="btn btn-outline" onclick="prevWizardStep(1)"><i class="fa-solid fa-arrow-left"></i> Previous</button>
+                                    <button type="button" class="btn btn-primary" onclick="nextWizardStep(3)">Next <i class="fa-solid fa-arrow-right"></i></button>
+                                </div>
+                            </div>
+
+                            <!-- Wizard Step 3: Credit & Pincode -->
+                            <div class="wizard-step" id="wizard-step-3">
+                                <div class="form-grid">
+                                    <div class="form-group">
+                                        <label for="elig-cibil">Estimated CIBIL Score *</label>
+                                        <input type="number" id="elig-cibil" class="form-input" placeholder="e.g. 750" min="300" max="900" required>
+                                        <small class="form-hint">Don't know? Guess or use the CIBIL Analyzer tab.</small>
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="elig-obligations">Total Existing Monthly EMIs (<i class="fa-solid fa-indian-rupee-sign" style="font-size: 0.9em;"></i>) *</label>
+                                        <input type="number" id="elig-obligations" class="form-input" placeholder="Total of all current loan EMIs" min="0" required>
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="elig-pincode">Pincode *</label>
+                                        <input type="text" id="elig-pincode" class="form-input" placeholder="6-digit pincode" pattern="[0-9]{6}" required>
+                                    </div>
+                                </div>
+                                
+                                <div class="consent-box">
+                                    <label class="checkbox-container">
+                                        <input type="checkbox" id="elig-consent" required>
+                                        <span class="checkmark-box"></span>
+                                        <span class="consent-text">I authorize moneyed to check my eligibility and store this information securely in compliance with the DPDP Act. We do not sell your data.</span>
+                                    </label>
+                                </div>
+
+                                <div class="wizard-buttons">
+                                    <button type="button" class="btn btn-outline" onclick="prevWizardStep(2)"><i class="fa-solid fa-arrow-left"></i> Previous</button>
+                                    <button type="submit" class="btn btn-accent" id="submit-eligibility-btn" onclick="processEligibility()">Calculate Eligibility <i class="fa-solid fa-calculator"></i></button>
+                                </div>
+                            </div>
+                        </form>
+                    </div>
+
+                    <!-- Eligibility Results Panel (Hidden initially) -->
+                    <div id="eligibility-results" class="results-panel hidden">
+                        <div class="glass-card">
+                            <div class="results-header">
+                                <div>
+                                    <h3>Eligibility Engine Results</h3>
+                                    <p>Based on your profile details and lender algorithms.</p>
+                                </div>
+                                <div class="lead-id-pill">Lead Registered</div>
+                            </div>
+                            
+                            <div class="summary-pill-container">
+                                <div class="summary-pill">
+                                    <span>Net Salary: </span>
+                                    <strong id="res-salary"><i class="fa-solid fa-indian-rupee-sign"></i>0</strong>
+                                </div>
+                                <div class="summary-pill">
+                                    <span>Current FOIR: </span>
+                                    <strong id="res-foir">0%</strong>
+                                </div>
+                                <div class="summary-pill">
+                                    <span>Estimated CIBIL: </span>
+                                    <strong id="res-cibil">0</strong>
+                                </div>
+                            </div>
+
+                            <div class="lender-matches-list" id="lender-matches-list">
+                                <!-- Matched lenders injected here by Javascript -->
+                            </div>
+
+                            <div class="elig-cta-box">
+                                <div class="cta-text">
+                                    <h4>Need a Customized Debt Structure or Help?</h4>
+                                    <p>Talk directly with Nakul Verma to optimize your eligibility, consolidate existing liabilities, or complete manual submission.</p>
+                                </div>
+                                <button class="btn btn-accent" onclick="switchTab('booking-tab')"><i class="fa-solid fa-calendar-check"></i> Book Advisory Call</button>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- 3. CALCULATORS SUITE TAB -->
+                <section class="tab-pane" id="calculators-tab">
+                    <!-- Calculator Sub Navigation -->
+                    <div class="calculator-sub-tabs">
+                        <button class="sub-tab-btn active" data-subtab="emi-calc-pane">EMI Calculator</button>
+                        <button class="sub-tab-btn" data-subtab="bt-calc-pane">Balance Transfer Savings</button>
+                        <button class="sub-tab-btn" data-subtab="foir-calc-pane">FOIR Calculator</button>
+                        <button class="sub-tab-btn" data-subtab="part-payment-calc-pane">Part-Payment Calculator</button>
+                        <button class="sub-tab-btn" data-subtab="od-calc-pane">Hybrid OD Calculator</button>
+                    </div>
+
+                    <!-- SUB-PANE 1: EMI CALCULATOR -->
+                    <div class="sub-tab-pane active" id="emi-calc-pane">
+                        <div class="grid-2">
+                            <div class="glass-card">
+                                <h3>EMI Calculator</h3>
+                                <p class="card-subtitle">Calculate monthly payments, total interest, and payout breakups.</p>
+                                
+                                <div class="form-group margin-top-md">
+                                    <div class="slider-header">
+                                        <label for="emi-amount">Loan Amount (<i class="fa-solid fa-indian-rupee-sign" style="font-size: 0.9em;"></i>)</label>
+                                        <span class="slider-val-box"><i class="fa-solid fa-indian-rupee-sign" style="font-size: 0.9em; margin-right: 2px;"></i> <input type="number" id="emi-amount-val" value="500000" min="10000" max="10000000"></span>
+                                    </div>
+                                    <input type="range" id="emi-amount" class="slider-input" min="10000" max="5000000" step="10000" value="500000">
+                                </div>
+
+                                <div class="form-group">
+                                    <div class="slider-header">
+                                        <label for="emi-roi">Rate of Interest (% p.a.)</label>
+                                        <span class="slider-val-box"><input type="number" id="emi-roi-val" value="10.5" step="0.1" min="5" max="36">%</span>
+                                    </div>
+                                    <input type="range" id="emi-roi" class="slider-input" min="5" max="25" step="0.1" value="10.5">
+                                </div>
+
+                                <div class="form-group">
+                                    <div class="slider-header">
+                                        <label for="emi-tenure">Tenure (Years)</label>
+                                        <span class="slider-val-box"><input type="number" id="emi-tenure-val" value="5" min="1" max="30"> Yrs</span>
+                                    </div>
+                                    <input type="range" id="emi-tenure" class="slider-input" min="1" max="25" step="1" value="5">
+                                </div>
+                            </div>
+
+                            <div class="glass-card flex-center-content">
+                                <div class="calculator-results-box text-center">
+                                    <h4>Your Monthly EMI</h4>
+                                    <div class="emi-display"><i class="fa-solid fa-indian-rupee-sign"></i> <span id="calc-emi-result">10,747</span></div>
+                                    
+                                    <div class="calc-breakdown-grid">
+                                        <div class="breakdown-item">
+                                            <span>Principal Amount</span>
+                                            <strong id="calc-principal-result"><i class="fa-solid fa-indian-rupee-sign" style="font-size: 0.9em; margin-right: 2px;"></i>5,00,000</strong>
+                                        </div>
+                                        <div class="breakdown-item">
+                                            <span>Total Interest</span>
+                                            <strong class="text-gold" id="calc-interest-result"><i class="fa-solid fa-indian-rupee-sign" style="font-size: 0.9em; margin-right: 2px;"></i>1,44,817</strong>
+                                        </div>
+                                        <div class="breakdown-item">
+                                            <span>Total Payable</span>
+                                            <strong class="text-green" id="calc-payable-result"><i class="fa-solid fa-indian-rupee-sign" style="font-size: 0.9em; margin-right: 2px;"></i>6,44,817</strong>
+                                        </div>
+                                    </div>
+                                    <button class="btn btn-primary margin-top-md" onclick="switchTab('eligibility-tab')">Check Lender Match</button>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Amortization Schedule -->
+                        <div class="schedule-container margin-top-lg glass-card" id="emi-schedule-container">
+                            <div class="schedule-header flex-between" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+                                <h3>Amortization Schedule</h3>
+                                <div class="export-actions" style="display: flex; gap: 0.5rem;">
+                                    <button class="btn btn-outline" style="padding: 0.4rem 0.8rem; font-size: 0.9em;" onclick="exportSchedule('emi', 'pdf')"><i class="fa-solid fa-file-pdf text-red" style="color: #dc3545;"></i> PDF</button>
+                                    <button class="btn btn-outline" style="padding: 0.4rem 0.8rem; font-size: 0.9em;" onclick="exportSchedule('emi', 'excel')"><i class="fa-solid fa-file-excel text-green" style="color: #198754;"></i> Excel</button>
+                                </div>
+                            </div>
+                            <div class="table-responsive" style="overflow-x: auto; max-height: 400px;">
+                                <table class="schedule-table w-100" id="emi-schedule-table">
+                                    <thead>
+                                        <tr>
+                                            <th>Month</th>
+                                            <th>Opening Bal</th>
+                                            <th>EMI</th>
+                                            <th>Interest</th>
+                                            <th>Principal</th>
+                                            <th>Closing Bal</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="emi-schedule-body">
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- SUB-PANE 2: BALANCE TRANSFER / DEBT CONSOLIDATION -->
+                    <div class="sub-tab-pane" id="bt-calc-pane">
+                        <div class="grid-2">
+                            <div class="glass-card">
+                                <h3>Debt Consolidation & Balance Transfer Saver</h3>
+                                <p class="card-subtitle">Calculate how much money you can save by moving high cost debts to a consolidated structure.</p>
+                                
+                                <div class="form-group margin-top-md">
+                                    <label for="bt-current-pos">Outstanding Principal Amount (<i class="fa-solid fa-indian-rupee-sign" style="font-size: 0.9em;"></i>)</label>
+                                    <input type="number" id="bt-current-pos" class="form-input" placeholder="e.g. 800000" value="800000">
+                                </div>
+                                <div class="form-grid">
+                                    <div class="form-group">
+                                        <label for="bt-current-roi">Current Interest Rate (% p.a.)</label>
+                                        <input type="number" id="bt-current-roi" class="form-input" placeholder="e.g. 16.5" value="16.5" step="0.1">
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="bt-current-months">Remaining Tenure (Months)</label>
+                                        <input type="number" id="bt-current-months" class="form-input" placeholder="e.g. 48" value="48">
+                                    </div>
+                                </div>
+                                <hr class="divider">
+                                <div class="form-grid">
+                                    <div class="form-group">
+                                        <label for="bt-target-roi">New/Target Interest Rate (% p.a.)</label>
+                                        <input type="number" id="bt-target-roi" class="form-input" placeholder="e.g. 10.75" value="10.75" step="0.1">
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="bt-target-months">New Tenure (Months)</label>
+                                        <input type="number" id="bt-target-months" class="form-input" placeholder="Keep same or consolidate" value="48">
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="glass-card flex-center-content bg-gradient-premium">
+                                <div class="calculator-results-box text-center">
+                                    <i class="fa-solid fa-indian-rupee-sign animated-rupee visual-icon-glow"></i>
+                                    <h4>Total Interest Savings</h4>
+                                    <div class="savings-large"><i class="fa-solid fa-indian-rupee-sign"></i> <span id="bt-savings-result">1,09,475</span></div>
+                                    
+                                    <div class="calc-breakdown-grid margin-top-md">
+                                        <div class="breakdown-item">
+                                            <span>Current EMI</span>
+                                            <strong id="bt-current-emi"><i class="fa-solid fa-indian-rupee-sign" style="font-size: 0.9em; margin-right: 2px;"></i>23,017</strong>
+                                        </div>
+                                        <div class="breakdown-item">
+                                            <span>New EMI</span>
+                                            <strong class="text-green" id="bt-new-emi"><i class="fa-solid fa-indian-rupee-sign" style="font-size: 0.9em; margin-right: 2px;"></i>20,578</strong>
+                                        </div>
+                                        <div class="breakdown-item">
+                                            <span>Monthly Saved</span>
+                                            <strong class="text-gold" id="bt-monthly-saving"><i class="fa-solid fa-indian-rupee-sign" style="font-size: 0.9em; margin-right: 2px;"></i>2,439 / mo</strong>
+                                        </div>
+                                    </div>
+                                    <p class="savings-disclaimer">By restructuring, your overall loan interest burden drops, yielding a net positive cash flow immediately.</p>
+                                    <button class="btn btn-accent" onclick="applyForBT()"><i class="fa-solid fa-arrow-right-arrow-left"></i> Apply for Balance Transfer</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- SUB-PANE 3: FOIR CALCULATOR -->
+                    <div class="sub-tab-pane" id="foir-calc-pane">
+                        <div class="grid-2">
+                            <div class="glass-card">
+                                <h3>FOIR (Fixed Obligation to Income Ratio)</h3>
+                                <p class="card-subtitle">Lenders check FOIR to decide your repayment capacity. Keeping it below 40% ensures high approval rates.</p>
+                                
+                                <div class="form-group margin-top-md">
+                                    <label for="foir-income">Net Monthly Income (<i class="fa-solid fa-indian-rupee-sign" style="font-size: 0.9em;"></i>)</label>
+                                    <input type="number" id="foir-income" class="form-input" value="100000" id="foir-income-input">
+                                </div>
+                                <div class="form-grid">
+                                    <div class="form-group">
+                                        <label for="foir-rent">Rent / Home Loan EMI (<i class="fa-solid fa-indian-rupee-sign" style="font-size: 0.9em;"></i>)</label>
+                                        <input type="number" id="foir-rent" class="form-input" value="20000" id="foir-rent-input">
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="foir-other-emi">Other Active EMIs (<i class="fa-solid fa-indian-rupee-sign" style="font-size: 0.9em;"></i>)</label>
+                                        <input type="number" id="foir-other-emi" class="form-input" value="15000" id="foir-other-emi-input">
+                                    </div>
+                                </div>
+                                <div class="form-group">
+                                    <label for="foir-cc-due">Credit Cards Outstanding Total (<i class="fa-solid fa-indian-rupee-sign" style="font-size: 0.9em;"></i>)</label>
+                                    <input type="number" id="foir-cc-due" class="form-input" value="40000" id="foir-cc-due-input">
+                                    <small class="form-hint">Lenders calculate 5% of your card outstanding as monthly obligation.</small>
+                                </div>
+                            </div>
+
+                            <div class="glass-card flex-center-content">
+                                <div class="calculator-results-box text-center">
+                                    <h4>Your FOIR Score</h4>
+                                    <div class="foir-meter-container">
+                                        <div class="foir-val-big" id="foir-result-val">37%</div>
+                                        <span class="badge text-green" id="foir-status-badge">Safe Profile</span>
+                                    </div>
+                                    
+                                    <div class="foir-alert-box" id="foir-alert-text">
+                                        Your fixed obligations constitute 37% of your net income. This is considered healthy, and you have significant borrowing bandwidth.
+                                    </div>
+                                    
+                                    <button class="btn btn-outline" onclick="syncFoirToDashboard()">Sync to Dashboard</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- SUB-PANE 4: PART-PAYMENT CALCULATOR -->
+                    <div class="sub-tab-pane" id="part-payment-calc-pane">
+                        <div class="grid-2">
+                            <div class="glass-card">
+                                <h3>Part-Payment Savings Calculator</h3>
+                                <p class="card-subtitle">See how making a lump sum part-payment reduces your total interest and loan tenure.</p>
+                                
+                                <div class="form-group margin-top-md">
+                                    <label for="pp-principal">Outstanding Principal (<i class="fa-solid fa-indian-rupee-sign" style="font-size: 0.9em;"></i>)</label>
+                                    <input type="number" id="pp-principal" class="form-input" value="1000000">
+                                </div>
+                                <div class="form-grid">
+                                    <div class="form-group">
+                                        <label for="pp-roi">Interest Rate (% p.a.)</label>
+                                        <input type="number" id="pp-roi" class="form-input" value="10.5" step="0.1">
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="pp-months">Remaining Tenure (Months)</label>
+                                        <input type="number" id="pp-months" class="form-input" value="60">
+                                    </div>
+                                </div>
+                                <hr class="divider">
+                                <div class="form-group">
+                                    <label>Add Custom Part Payments?</label>
+                                    <select id="pp-toggle" class="form-input" onchange="window.togglePP()">
+                                        <option value="no">No</option>
+                                        <option value="yes">Yes, edit monthly schedule below</option>
+                                    </select>
+                                    <small class="form-hint margin-top-sm" style="display:block; color:var(--deep-green);">Scroll down to the Amortization Schedule to enter custom part-payments month-by-month. It will auto-calculate!</small>
+                                </div>
+                                <input type="hidden" id="pp-amount" value="0">
+                            </div>
+
+                            <div class="glass-card flex-center-content bg-gradient-premium">
+                                <div class="calculator-results-box text-center">
+                                    <i class="fa-solid fa-indian-rupee-sign animated-rupee visual-icon-glow"></i>
+                                    <h4>Total Interest Saved</h4>
+                                    <div class="savings-large text-green"><i class="fa-solid fa-indian-rupee-sign"></i> <span id="pp-interest-saved">0</span></div>
+                                    
+                                    <div class="calc-breakdown-grid margin-top-md">
+                                        <div class="breakdown-item">
+                                            <span>Current Interest</span>
+                                            <strong id="pp-old-interest"><i class="fa-solid fa-indian-rupee-sign" style="font-size: 0.9em;"></i>0</strong>
+                                        </div>
+                                        <div class="breakdown-item">
+                                            <span>New Interest</span>
+                                            <strong id="pp-new-interest"><i class="fa-solid fa-indian-rupee-sign" style="font-size: 0.9em;"></i>0</strong>
+                                        </div>
+                                        <div class="breakdown-item">
+                                            <span>Tenure Reduced By</span>
+                                            <strong class="text-gold" id="pp-tenure-saved">0 Months</strong>
+                                        </div>
+                                    </div>
+                                    <p class="savings-disclaimer">Assume EMI remains the same. Part-payment directly reduces principal, shortening tenure.</p>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Amortization Schedule -->
+                        <div class="schedule-container margin-top-lg glass-card" id="pp-schedule-container">
+                            <div class="schedule-header flex-between" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+                                <h3>Amortization Schedule</h3>
+                                <div class="export-actions" style="display: flex; gap: 0.5rem;">
+                                    <button class="btn btn-outline" style="padding: 0.4rem 0.8rem; font-size: 0.9em;" onclick="exportSchedule('pp', 'pdf')"><i class="fa-solid fa-file-pdf text-red" style="color: #dc3545;"></i> PDF</button>
+                                    <button class="btn btn-outline" style="padding: 0.4rem 0.8rem; font-size: 0.9em;" onclick="exportSchedule('pp', 'excel')"><i class="fa-solid fa-file-excel text-green" style="color: #198754;"></i> Excel</button>
+                                </div>
+                            </div>
+                            <div class="table-responsive" style="overflow-x: auto; max-height: 400px;">
+                                <table class="schedule-table w-100" id="pp-schedule-table">
+                                    <thead>
+                                        <tr>
+                                            <th>Month</th>
+                                            <th>Opening Bal</th>
+                                            <th>EMI</th>
+                                            <th>Part Payment</th>
+                                            <th>Interest</th>
+                                            <th>Principal</th>
+                                            <th>Closing Bal</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="pp-schedule-body">
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- SUB-PANE 5: HYBRID OD CALCULATOR -->
+                    <div class="sub-tab-pane" id="od-calc-pane">
+                        <div class="grid-2">
+                            <div class="glass-card">
+                                <h3>Hybrid Dropline Overdraft (OD)</h3>
+                                <p class="card-subtitle">Fixed limit for the first <strong id="od-fixed-text-display">1 Year (12 Months)</strong>, drops monthly thereafter. Pay interest only on what you use.</p>
+                                
+                                <div class="form-group margin-top-md">
+                                    <label for="od-limit">Total Approved Limit (<i class="fa-solid fa-indian-rupee-sign" style="font-size: 0.9em;"></i>)</label>
+                                    <input type="number" id="od-limit" class="form-input" value="5000000" oninput="document.getElementById('od-withdrawn').value = this.value; window.calculateHybridOD && window.calculateHybridOD();">
+                                </div>
+                                <div class="form-grid">
+                                    <div class="form-group">
+                                        <label for="od-roi">Interest Rate (% p.a.)</label>
+                                        <input type="number" id="od-roi" class="form-input" value="9.5" step="0.1">
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="od-tenure">Total Tenure (Months)</label>
+                                        <input type="number" id="od-tenure" class="form-input" value="120" oninput="window.calculateHybridOD && window.calculateHybridOD();">
+                                    </div>
+                                </div>
+                                <div class="form-grid margin-top-md">
+                                    <div class="form-group">
+                                        <label for="od-fixed-months">Fixed Limit Period</label>
+                                        <select id="od-fixed-months" class="form-input" onchange="updateODFixedText(); window.calculateHybridOD && window.calculateHybridOD();">
+                                            <option value="12" selected>1 Year (12 Months)</option>
+                                            <option value="24">2 Years (24 Months)</option>
+                                            <option value="36">3 Years (36 Months)</option>
+                                            <option value="60">5 Years (60 Months)</option>
+                                        </select>
+                                    </div>
+                                </div>
+                                <hr class="divider">
+                                <h4>Simulate Usage</h4>
+                                <div class="form-grid margin-top-md">
+                                    <div class="form-group">
+                                        <label for="od-withdrawn">Initial Amount Withdrawn (<i class="fa-solid fa-indian-rupee-sign" style="font-size: 0.9em;"></i>)</label>
+                                        <input type="number" id="od-withdrawn" class="form-input" value="5000000" readonly>
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="od-month-check">Check Limit at Month # <small style="color:var(--soft-green);">(Auto-calculated)</small></label>
+                                        <input type="number" id="od-month-check" class="form-input" value="48" readonly style="background-color: rgba(0,0,0,0.05); cursor: not-allowed;">
+                                    </div>
+                                </div>
+                                <div class="form-group margin-top-md">
+                                    <label>Add Custom Transactions?</label>
+                                    <select id="od-toggle" class="form-input" onchange="window.toggleOD()">
+                                        <option value="no">No</option>
+                                        <option value="yes">Yes, edit monthly schedule below</option>
+                                    </select>
+                                    <small class="form-hint margin-top-sm" style="display:block; color:var(--deep-green);">Scroll down to the OD Usage Schedule to enter custom withdrawals and part-payments month-by-month.</small>
+                                </div>
+                            </div>
+
+                            <div class="glass-card flex-center-content">
+                                <div class="calculator-results-box text-center">
+                                    <h4>Monthly Interest Payout (Month 1)</h4>
+                                    <div class="emi-display text-gold"><i class="fa-solid fa-indian-rupee-sign"></i> <span id="od-monthly-interest">0</span></div>
+                                    
+                                    <div class="calc-breakdown-grid margin-top-md">
+                                        <div class="breakdown-item">
+                                            <span>Fixed Period</span>
+                                            <strong id="od-disp-fixed-period">36 Months</strong>
+                                        </div>
+                                        <div class="breakdown-item">
+                                            <span>Limit at Month <span id="od-disp-month">48</span></span>
+                                            <strong id="od-limit-at-month"><i class="fa-solid fa-indian-rupee-sign" style="font-size: 0.9em;"></i>0</strong>
+                                        </div>
+                                        <div class="breakdown-item">
+                                            <span>Monthly Drop Amount</span>
+                                            <strong class="text-red" id="od-drop-amount"><i class="fa-solid fa-indian-rupee-sign" style="font-size: 0.9em;"></i>0</strong>
+                                        </div>
+                                    </div>
+                                    <p class="savings-disclaimer">If your drawn amount exceeds the dropped limit at any point, you must deposit the difference immediately.</p>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Amortization Schedule -->
+                        <div class="schedule-container margin-top-lg glass-card" id="od-schedule-container">
+                            <div class="schedule-header flex-between" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+                                <h3>OD Usage Schedule</h3>
+                                <div class="export-actions" style="display: flex; gap: 0.5rem;">
+                                    <button class="btn btn-outline" style="padding: 0.4rem 0.8rem; font-size: 0.9em;" onclick="exportSchedule('od', 'pdf')"><i class="fa-solid fa-file-pdf text-red" style="color: #dc3545;"></i> PDF</button>
+                                    <button class="btn btn-outline" style="padding: 0.4rem 0.8rem; font-size: 0.9em;" onclick="exportSchedule('od', 'excel')"><i class="fa-solid fa-file-excel text-green" style="color: #198754;"></i> Excel</button>
+                                </div>
+                            </div>
+                            <div class="table-responsive" style="overflow-x: auto; max-height: 400px;">
+                                <table class="schedule-table w-100" id="od-schedule-table">
+                                    <thead>
+                                        <tr>
+                                            <th>Month</th>
+                                            <th>DropLine Limit</th>
+                                            <th>Limit Drop</th>
+                                            <th>Available Limit</th>
+                                            <th>Opening Principal</th>
+                                            <th>Withdrawal</th>
+                                            <th>Part Payment</th>
+                                            <th>Installment</th>
+                                            <th>Principal</th>
+                                            <th>Interest</th>
+                                            <th>Closing Principal</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="od-schedule-body">
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- 4. CIBIL ANALYZER TAB -->
+                <section class="tab-pane" id="cibil-tab">
+                    <div class="grid-3-2">
+                        <!-- Left Panel: Input & Mock Upload -->
+                        <div class="glass-card">
+                            <h3>CIBIL Report Analyzer</h3>
+                            <p class="card-subtitle">Simulate credit statement parsing. Upload a PDF report or manually declare accounts to identify errors, late fees, and overdue flags.</p>
+                            
+                            <div class="upload-zone" id="cibil-drop-zone">
+                                <i class="fa-solid fa-file-pdf pdf-upload-icon"></i>
+                                <h4>Drag & Drop CIBIL PDF Report</h4>
+                                <p>or click to select file from device</p>
+                                <span class="upload-badge">Secure DPDP Parsing</span>
+                                <input type="file" id="cibil-file-input" style="display:none;" accept=".pdf">
+                            </div>
+
+                            <div class="or-separator"><span>OR MANUALLY ENTER</span></div>
+
+                            <div class="manual-cibil-inputs">
+                                <div class="form-grid">
+                                    <div class="form-group">
+                                        <label for="cibil-manual-score">Estimated Credit Score</label>
+                                        <input type="number" id="cibil-manual-score" class="form-input" value="680" min="300" max="900">
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="cibil-manual-enq">Recent Enquiries (Last 90 days)</label>
+                                        <input type="number" id="cibil-manual-enq" class="form-input" value="6" min="0">
+                                    </div>
+                                </div>
+                                <div class="form-grid">
+                                    <div class="form-group">
+                                        <label for="cibil-manual-overdue">Active Overdue / Written-Off?</label>
+                                        <select id="cibil-manual-overdue" class="form-input">
+                                            <option value="no">No, clean history</option>
+                                            <option value="yes">Yes, active delay/settlement</option>
+                                        </select>
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="cibil-manual-cc-util">Credit Card Utilization (%)</label>
+                                        <input type="number" id="cibil-manual-cc-util" class="form-input" value="55" min="0" max="100">
+                                    </div>
+                                </div>
+                                <button class="btn btn-primary btn-full" onclick="analyzeCibilData()"><i class="fa-solid fa-magnifying-glass-chart"></i> Run CIBIL Assessment</button>
+                            </div>
+                        </div>
+
+                        <!-- Right Panel: CIBIL Analysis Output -->
+                        <div class="glass-card" id="cibil-report-card">
+                            <div class="cibil-analysis-placeholder text-center pad-lg" id="cibil-placeholder">
+                                <i class="fa-solid fa-chart-bar-glow placeholder-icon"></i>
+                                <h4>No CIBIL Report Analyzed Yet</h4>
+                                <p>Upload your statement or submit the manual parameters to see active loans, risk analysis, and credit score improvement checklist.</p>
+                            </div>
+
+                            <div class="cibil-analysis-results hidden" id="cibil-results-pane">
+                                <div class="results-header-cibil">
+                                    <div>
+                                        <h3>CIBIL Report Analysis</h3>
+                                        <span class="report-date">Generated: Just Now</span>
+                                    </div>
+                                    <div class="score-badge-cibil" id="cibil-score-badge">680</div>
+                                </div>
+
+                                <div class="cibil-verdict-box border-yellow" id="cibil-verdict-box">
+                                    <strong><i class="fa-solid fa-circle-info"></i> Credit Score: Average</strong>
+                                    <p id="cibil-verdict-text">Your credit profile shows moderate risk. Matched lenders might ask for extra salary slips, lower loan amount, or charge slightly higher ROI due to high enquiries and utilization.</p>
+                                </div>
+                                <h4 class="section-title-sm margin-top-md">Detected Risk Flags</h4>
+                                <ul class="risk-flags-list" id="cibil-flags-list">
+                                    <!-- Dynamic flag list -->
+                                </ul>
+
+                                <h4 class="section-title-sm margin-top-md">CIBIL Health Checklist</h4>
+                                <ul class="cibil-checklist" id="cibil-tips-list">
+                                    <!-- Dynamic credit tips -->
+                                </ul>
+
+                                <div class="cibil-action-panel margin-top-md">
+                                    <button class="btn btn-accent btn-full" onclick="switchTab('eligibility-tab')">Find Lenders For This Score</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- NEW: PARSED CIBIL TABULAR RESULTS -->
+                    <div id="cibil-parsed-results" style="display:none; margin-top: 2rem;">
+                        <div class="glass-card margin-bottom-md">
+                            <h3><i class="fa-solid fa-address-card text-mint"></i> Applicant Summary</h3>
+                            <div class="form-grid margin-top-md" id="cibil-summary-grid" style="grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));">
+                                <!-- Populated by JS -->
+                            </div>
+                        </div>
+
+                        <!-- Recent Inquiries Table -->
+                        <div class="glass-card margin-bottom-md" style="padding:0; overflow:hidden;" id="cibil-inquiries-section">
+                            <div style="padding: 15px 20px; display:flex; justify-content:space-between; align-items:center; border-bottom: 1px solid var(--border-glass); background:rgba(0,0,0,0.2);">
+                                <h3 style="font-size: 1.1rem;"><i class="fa-solid fa-clock-rotate-left text-gold"></i> Recent Inquiries (Last 90 Days)</h3>
+                            </div>
+                            <div class="table-container" style="overflow-x: auto;">
+                                <table class="cibil-data-table" style="width:100%; border-collapse: collapse; text-align: left;">
+                                    <thead style="background: var(--bg-glass);">
+                                        <tr style="border-bottom: 1px solid var(--neon-green);">
+                                            <th style="padding:10px;">Date</th>
+                                            <th style="padding:10px;">Institution Name</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="cibil-inquiries-table-body">
+                                        <!-- Populated via JS -->
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+
+                        <!-- Active Accounts Table -->
+                        <div class="glass-card margin-bottom-md" style="padding:0; overflow:hidden; border: 1px solid var(--neon-green);">
+                            <div style="padding: 20px; display:flex; justify-content:space-between; align-items:center; border-bottom: 1px solid var(--border-glass); background:rgba(0,255,100,0.05);">
+                                <h3><i class="fa-solid fa-circle-play text-green"></i> Live & Active Accounts</h3>
+                                <button class="btn btn-outline-white" onclick="exportCibilToExcel('active')" style="font-size: 13px; padding: 6px 12px;"><i class="fa-solid fa-file-excel"></i> Download Excel</button>
+                            </div>
+                            <div class="table-container" style="overflow-x: auto; max-height: 400px; overflow-y: auto;">
+                                <table class="cibil-data-table" id="cibil-active-table" style="width:max-content; border-collapse: collapse; text-align: left;">
+                                    <thead style="position: sticky; top: 0; background: var(--bg-glass); z-index: 10; backdrop-filter: blur(10px);">
+                                        <tr style="border-bottom: 2px solid var(--neon-green);">
+                                            <th style="padding:10px;">Member Name</th><th style="padding:10px;">Account Type</th><th style="padding:10px;">Account Number</th><th style="padding:10px;">Ownership</th>
+                                            <th style="padding:10px;">Credit Limit</th><th style="padding:10px;">Sanctioned Amount</th><th style="padding:10px;">High Credit</th><th style="padding:10px;">Current Balance</th>
+                                            <th style="padding:10px;">Amount Overdue</th><th style="padding:10px;">EMI</th><th style="padding:10px;">Date Opened</th><th style="padding:10px;">Payment Status</th><th style="padding:10px;">Payment History (DPD)</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="cibil-active-table-body">
+                                        <!-- Populated via JS -->
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+
+                        <!-- All Accounts Table -->
+                        <div class="glass-card" style="padding:0; overflow:hidden; border: 1px solid var(--text-charcoal);">
+                            <div style="padding: 20px; display:flex; justify-content:space-between; align-items:center; border-bottom: 1px solid var(--border-glass); background:rgba(0,0,0,0.3);">
+                                <h3><i class="fa-solid fa-list text-gold"></i> All Accounts History</h3>
+                                <button class="btn btn-outline-white" onclick="exportCibilToExcel('all')" style="font-size: 13px; padding: 6px 12px;"><i class="fa-solid fa-file-excel"></i> Download Excel</button>
+                            </div>
+                            <div class="table-container" style="overflow-x: auto; max-height: 400px; overflow-y: auto;">
+                                <table class="cibil-data-table" id="cibil-all-table" style="width:max-content; border-collapse: collapse; text-align: left; opacity: 0.95;">
+                                    <thead style="position: sticky; top: 0; background: var(--bg-glass); z-index: 10; backdrop-filter: blur(10px);">
+                                        <tr style="border-bottom: 2px solid var(--text-charcoal);">
+                                            <th style="padding:10px;">Member Name</th><th style="padding:10px;">Account Type</th><th style="padding:10px;">Account Number</th><th style="padding:10px;">Ownership</th>
+                                            <th style="padding:10px;">Credit Limit</th><th style="padding:10px;">Sanctioned Amount</th><th style="padding:10px;">High Credit</th><th style="padding:10px;">Current Balance</th>
+                                            <th style="padding:10px;">Amount Overdue</th><th style="padding:10px;">EMI</th><th style="padding:10px;">Date Opened</th><th style="padding:10px;">Date Closed</th><th style="padding:10px;">Payment Status</th><th style="padding:10px;">Payment History (DPD)</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="cibil-all-table-body">
+                                        <!-- Populated via JS -->
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- 5. EXPENSE TRACKER TAB -->
+                <section class="tab-pane" id="expenses-tab">
+                    <div class="grid-2">
+                        <!-- Left Panel: Transaction Input & List -->
+                        <div class="flex-column-between" style="gap: 1.5rem;">
+                            <!-- Form Card -->
+                            <div class="glass-card">
+                                <h3><i class="fa-solid fa-bolt text-gold"></i> Quick Log Expense</h3>
+                                <p class="card-subtitle">Track your daily spends.</p>
+                                
+                                <div class="form-grid margin-top-md">
+                                    <div class="form-group">
+                                        <label for="exp-amount">Amount (<i class="fa-solid fa-indian-rupee-sign" style="font-size: 0.9em;"></i>)</label>
+                                        <input type="number" id="exp-amount" class="form-input" placeholder="e.g. 450">
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="exp-category">Category</label>
+                                        <select id="exp-category" class="form-input">
+                                            <option value="needs">Needs (Bills, Groceries, Rent)</option>
+                                            <option value="wants">Wants (Food, Entertainment, Shopping)</option>
+                                            <option value="savings">Savings & Investments</option>
+                                        </select>
+                                    </div>
+                                </div>
+                                <div class="form-grid">
+                                    <div class="form-group">
+                                        <label for="exp-note">Note <small style="color:var(--soft-green); font-weight:normal;">(Auto-categorizes Needs/Wants)</small></label>
+                                        <input type="text" id="exp-note" class="form-input" placeholder="e.g. Zomato lunch" oninput="autoCategorizeExpense()">
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="exp-date">Date</label>
+                                        <input type="date" id="exp-date" class="form-input">
+                                    </div>
+                                </div>
+                                <button class="btn btn-primary btn-full margin-top-md" onclick="addExpenseTransaction()"><i class="fa-solid fa-plus"></i> Log Transaction</button>
+                            </div>
+
+                            <!-- Ledger Card -->
+                            <div class="glass-card flex-grow-1" style="display:flex; flex-direction:column;">
+                                <div style="display:flex; justify-content:space-between; align-items:center;">
+                                    <h3><i class="fa-solid fa-clock-rotate-left text-mint"></i> Recent Transactions</h3>
+                                    <div style="display:flex; gap:10px;">
+                                        <select id="exp-filter" class="form-input" style="padding: 5px 10px; height:auto; width:120px; font-size:12px;" onchange="updateExpenseDashboard()">
+                                            <option value="all">All</option>
+                                            <option value="needs">Needs</option>
+                                            <option value="wants">Wants</option>
+                                            <option value="savings">Savings</option>
+                                        </select>
+                                        <button class="btn btn-outline-white" style="padding: 5px 10px; font-size:12px;" onclick="exportExpenses()"><i class="fa-solid fa-file-excel"></i> Export</button>
+                                    </div>
+                                </div>
+                                <div class="transaction-list margin-top-md" id="transaction-list" style="flex-grow:1; max-height: 280px; overflow-y: auto;">
+                                    <div class="text-center pad-lg" id="empty-tx-state" style="color: #627267;">
+                                        <i class="fa-solid fa-receipt placeholder-icon" style="font-size: 2em; margin-bottom: 10px;"></i>
+                                        <p>No transactions yet. Start logging!</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Right Panel: Smart Analytics -->
+                        <div class="flex-column-between" style="gap: 1.5rem;">
+                            <!-- Safe to Spend Dial -->
+                            <div class="glass-card bg-gradient-premium text-center">
+                                <div class="form-group margin-top-md" style="text-align:left; max-width: 250px; margin: 0 auto 20px;">
+                                    <label for="exp-budget">Set Monthly Budget (<i class="fa-solid fa-indian-rupee-sign" style="font-size: 0.9em;"></i>)</label>
+                                    <input type="number" id="exp-budget" class="form-input" value="80000" oninput="updateExpenseDashboard()">
+                                </div>
+                                
+                                <h4>Safe to Spend Today</h4>
+                                <p class="card-subtitle" style="margin-bottom: 20px;">To stay within budget this month.</p>
+                                
+                                <div class="safe-to-spend-dial">
+                                    <i class="fa-solid fa-indian-rupee-sign text-green" style="font-size: 1.5em; margin-bottom: 5px; display:inline-block;"></i>
+                                    <span id="safe-to-spend-val" style="font-size: 3.5rem; font-weight: 700; color: var(--dark-charcoal); letter-spacing: -1px; white-space: nowrap; line-height:1; transition: font-size 0.2s;">0</span>
+                                </div>
+                                
+                                <div class="margin-top-md" style="display:flex; justify-content:center; gap:20px; font-size: 0.9em; color:#627267;">
+                                    <div>Spent So Far: <strong class="text-red" id="spent-so-far"><i class="fa-solid fa-indian-rupee-sign" style="font-size: 0.9em;"></i> 0</strong></div>
+                                    <div>Days Left: <strong id="days-left-val">0</strong></div>
+                                </div>
+                            </div>
+
+                            <!-- Category Chart -->
+                            <div class="glass-card text-center flex-grow-1">
+                                <h3>Category Breakdown</h3>
+                                <p class="card-subtitle margin-bottom-md">Are you following the 50/30/20 rule?</p>
+                                
+                                <div style="position: relative; height: 220px; width: 100%; display: flex; justify-content: center;">
+                                    <canvas id="expenseChart"></canvas>
+                                </div>
+                                
+                                <div class="chart-legend margin-top-md" style="display:flex; justify-content:center; gap: 15px; flex-wrap: wrap;" id="chart-legend">
+                                    <!-- Dynamic Legend -->
+                                </div>
+
+                                <!-- Budget Progress Bars -->
+                                <div class="margin-top-lg text-left" id="budget-progress-container" style="display:none;">
+                                    <h4 style="margin-bottom: 10px; font-size:14px;">Budget Limits</h4>
+                                    
+                                    <div class="progress-bar-wrapper" style="margin-bottom: 10px;">
+                                        <div style="display:flex; justify-content:space-between; font-size:12px; margin-bottom:5px;">
+                                            <span>Needs (<span id="bud-pct-needs">50</span>%)</span>
+                                            <span id="bud-val-needs">₹0 / ₹0</span>
+                                        </div>
+                                        <div style="width:100%; background:rgba(255,255,255,0.1); border-radius:5px; height:8px; overflow:hidden;">
+                                            <div id="bar-needs" style="width:0%; height:100%; background:var(--brand-green); transition:var(--transition-smooth);"></div>
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="progress-bar-wrapper" style="margin-bottom: 10px;">
+                                        <div style="display:flex; justify-content:space-between; font-size:12px; margin-bottom:5px;">
+                                            <span>Wants (<span id="bud-pct-wants">30</span>%)</span>
+                                            <span id="bud-val-wants">₹0 / ₹0</span>
+                                        </div>
+                                        <div style="width:100%; background:rgba(255,255,255,0.1); border-radius:5px; height:8px; overflow:hidden;">
+                                            <div id="bar-wants" style="width:0%; height:100%; background:#F3A712; transition:var(--transition-smooth);"></div>
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="progress-bar-wrapper">
+                                        <div style="display:flex; justify-content:space-between; font-size:12px; margin-bottom:5px;">
+                                            <span>Savings (<span id="bud-pct-savings">20</span>%)</span>
+                                            <span id="bud-val-savings">₹0 / ₹0</span>
+                                        </div>
+                                        <div style="width:100%; background:rgba(255,255,255,0.1); border-radius:5px; height:8px; overflow:hidden;">
+                                            <div id="bar-savings" style="width:0%; height:100%; background:var(--deep-green); transition:var(--transition-smooth);"></div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- 6. AI FINANCIAL COACH TAB -->
+                <section class="tab-pane" id="ai-coach-tab">
+                    <div class="glass-card ai-coach-container">
+                        <!-- Chat Header -->
+                        <div class="ai-coach-header" style="display:flex; justify-content: space-between; align-items:center; flex-wrap: wrap; gap: 10px; padding: 15px; border-bottom: 1px solid var(--border-glass);">
+                            <div style="display:flex; align-items:center; gap: 15px;">
+                                <div class="coach-avatar">
+                                    <i class="fa-solid fa-robot"></i>
+                                </div>
+                                <div class="coach-details">
+                                    <h3 style="margin:0; font-size: 1.1rem;">Moneyed AI Coach</h3>
+                                    <p style="margin:0; font-size:11px; color:var(--text-secondary);"><span class="online-indicator"></span> <i class="fa-solid fa-bolt" style="color:var(--brand-green);"></i> By Founder Nakul Verma & Co-Founder Priyanka Verma</p>
+                                </div>
+                            </div>
+                            <div style="display:flex; gap: 10px; align-items:center;">
+                                <select id="bot-profile" class="form-input" style="width:140px; padding: 5px; font-size:12px; height:auto; background:var(--bg-glass);" onchange="generateDynamicSuggestions()">
+                                    <option value="All" selected>All Profiles</option>
+                                    <option value="Salaried">Salaried</option>
+                                    <option value="Self-Employed">Self-Employed</option>
+                                    <option value="Professional">Professional</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <!-- Chat Messages Display -->
+                        <div class="chat-messages-area" id="chat-messages">
+                            <div class="message incoming">
+                                <div class="msg-bubble">
+                                    Namaste! Main aapka moneyed AI Financial Coach hoon. Main loans, debt restructuring, aur CIBIL rules ko easily samjha sakta hoon. Aap mujhse finance standard queries puch sakte hain ya niche diye gye topics select kar sakte hain!
+                                </div>
+                                <span class="msg-time">Just Now</span>
+                            </div>
+                        </div>
+
+                        <!-- Suggested Queries Chips -->
+                        <div class="chat-suggestions" id="chat-suggestions-container">
+                            <button class="suggestion-chip" onclick="askCoachPrompt('Why is my CIBIL score dropping?')">CIBIL drop kyu hota hai?</button>
+                            <button class="suggestion-chip" onclick="askCoachPrompt('How does a Balance Transfer (BT) save money?')">Balance Transfer se saving kaise hoti hai?</button>
+                            <button class="suggestion-chip" onclick="askCoachPrompt('What is FOIR and why do lenders care?')">FOIR ratio criteria kya hai?</button>
+                            <button class="suggestion-chip" onclick="askCoachPrompt('I have high EMIs and low income, what should I do?')">Mera EMI burden high hai, solution kya hai?</button>
+                        </div>
+
+                        <!-- Chat Input Box -->
+                        <div class="chat-input-row">
+                            <input type="text" id="chat-user-input" class="chat-input" placeholder="Type your personal finance or loan query..." onkeydown="if(event.key==='Enter') sendChatMessage()">
+                            <button class="btn btn-accent chat-send-btn" onclick="sendChatMessage()"><i class="fa-solid fa-paper-plane"></i></button>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- 7. CONSULTATION SCHEDULER TAB -->
+                <section class="tab-pane" id="booking-tab">
+                    <div class="glass-card main-booking-card">
+                        <div class="grid-booking">
+                            <!-- Booking Details sidebar -->
+                            <div class="booking-sidebar">
+                                <div class="avatar-booking">NV</div>
+                                <h3>1-on-1 Loan Advisory Call</h3>
+                                <p class="booking-duration"><i class="fa-regular fa-clock"></i> 30 Minutes Consultation</p>
+                                <p class="booking-by">With Nakul Verma, Founder & Debt Specialist</p>
+                                <hr class="divider-white">
+                                <div class="booking-benefit-list">
+                                    <div class="benefit-item"><i class="fa-solid fa-check"></i> Analysis of active EMI structures</div>
+                                    <div class="benefit-item"><i class="fa-solid fa-check"></i> CIBIL report assessment & corrections</div>
+                                    <div class="benefit-item"><i class="fa-solid fa-check"></i> Finding cheapest balance transfer option</div>
+                                </div>
+                            </div>
+
+                            <!-- Booking Form wizard -->
+                            <div class="booking-form-pane">
+                                <h3>Schedule Your Free Session</h3>
+                                <p class="margin-bottom-md">Select your consultation details and reserve a time slot.</p>
+                                
+                                <div class="booking-steps-container">
+                                    <!-- Step 1: Select Topic -->
+                                    <div class="form-group">
+                                        <label for="book-topic">Consultation Focus Area *</label>
+                                        <select id="book-topic" class="form-input">
+                                            <option value="Debt Consolidation">Debt Consolidation & Saving (BT)</option>
+                                            <option value="Loan Eligibility">Loan Eligibility Check (New Loan)</option>
+                                            <option value="CIBIL Improvement">CIBIL Health Check / Improvement</option>
+                                            <option value="Business Loan">Business Funding / Lap Advice</option>
+                                        </select>
+                                    </div>
+
+                                    <!-- Step 2: Date Grid -->
+                                    <div class="form-group">
+                                        <label>Select Date *</label>
+                                        <div class="date-selector-grid" id="booking-date-grid">
+                                            <!-- Dynamically generated next 5 days -->
+                                        </div>
+                                    </div>
+
+                                    <!-- Step 3: Slots Grid -->
+                                    <div class="form-group">
+                                        <label>Select Available Time Slot *</label>
+                                        <div class="slots-selector-grid" id="booking-slots-grid">
+                                            <button type="button" class="slot-btn" data-slot="10:30 AM - 11:00 AM">10:30 AM</button>
+                                            <button type="button" class="slot-btn" data-slot="11:30 AM - 12:00 PM">11:30 AM</button>
+                                            <button type="button" class="slot-btn" data-slot="02:30 PM - 03:00 PM">02:30 PM</button>
+                                            <button type="button" class="slot-btn" data-slot="04:00 PM - 04:30 PM">04:00 PM</button>
+                                            <button type="button" class="slot-btn" data-slot="05:30 PM - 06:00 PM">05:30 PM</button>
+                                        </div>
+                                    </div>
+
+                                    <!-- Step 4: Contact details -->
+                                    <div class="form-grid">
+                                        <div class="form-group">
+                                            <label for="book-name">Your Name *</label>
+                                            <input type="text" id="book-name" class="form-input" placeholder="e.g. Amit Kumar">
+                                        </div>
+                                        <div class="form-group">
+                                            <label for="book-phone">Mobile Number *</label>
+                                            <input type="tel" id="book-phone" class="form-input" placeholder="10-digit number" pattern="[0-9]{10}">
+                                        </div>
+                                    </div>
+
+                                    <button class="btn btn-accent btn-full margin-top-md" onclick="submitBooking()"><i class="fa-regular fa-calendar-check"></i> Book Consultation Call</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- 8. ADMIN CRM DASHBOARD TAB -->
+                <section class="tab-pane" id="crm-tab">
+                    <!-- CRM Header Area -->
+                    <div class="crm-top-metrics">
+                        <div class="glass-card crm-metric-box">
+                            <span>Total Leads</span>
+                            <h3 id="crm-stat-total">0</h3>
+                        </div>
+                        <div class="glass-card crm-metric-box">
+                            <span>New Leads Today</span>
+                            <h3 class="text-green" id="crm-stat-new">0</h3>
+                        </div>
+                        <div class="glass-card crm-metric-box">
+                            <span>Average CIBIL</span>
+                            <h3 class="text-gold" id="crm-stat-cibil">0</h3>
+                        </div>
+                        <div class="glass-card crm-metric-box text-right">
+                            <button class="btn btn-outline btn-sm" onclick="clearAllLeads()"><i class="fa-solid fa-trash"></i> Reset Database</button>
+                        </div>
+                    </div>
+
+                    <!-- CRM Table Card -->
+                    <div class="glass-card crm-table-card">
+                        <div class="crm-table-header">
+                            <div>
+                                <h3>Lead Management & Processing</h3>
+                                <p>Track customer profiles, income details, credit history, and assign status pipelines.</p>
+                            </div>
+                            <div class="crm-filter-row">
+                                <select class="crm-filter-select" id="crm-filter-status" onchange="renderCrmTable()">
+                                    <option value="all">All Statuses</option>
+                                    <option value="New">New</option>
+                                    <option value="Follow-Up">Follow-Up</option>
+                                    <option value="Approved">Approved</option>
+                                    <option value="Disbursed">Disbursed</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="table-scroll-container">
+                            <table class="crm-table">
+                                <thead>
+                                    <tr>
+                                        <th>Customer</th>
+                                        <th>Contact / Location</th>
+                                        <th>Income & Debt</th>
+                                        <th>CIBIL Score</th>
+                                        <th>Source</th>
+                                        <th>Status</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="crm-leads-tbody">
+                                    <!-- Injected by app.js -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </section>
+
+
+            </div>
+        </main>
+    </div>
+
+    <!-- Lead Detail Modal -->
+    <div class="modal-overlay hidden" id="lead-modal">
+        <div class="glass-card modal-card">
+            <div class="modal-header">
+                <h3>Lead Details</h3>
+                <button class="modal-close-btn" onclick="closeLeadModal()"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            
+            <div class="modal-body" id="lead-modal-body">
+                <!-- Injected dynamically by JS -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Google Login / Firebase Auth Modal -->
+    <div id="login-modal" class="modal-overlay" style="display: none; position: fixed; top:0; left:0; width:100%; height:100%; background: rgba(0,0,0,0.6); z-index: 9999; justify-content: center; align-items: center; backdrop-filter: blur(5px);">
+        <div class="glass-card" style="max-width: 400px; width: 90%; position: relative; padding: 40px 30px; text-align: center;">
+            <button onclick="closeLoginModal()" style="position: absolute; top: 15px; right: 20px; background: none; border: none; font-size: 1.5rem; cursor: pointer; color: var(--dark-charcoal);"><i class="fa-solid fa-xmark"></i></button>
+            
+            <div style="display: flex; justify-content: center; align-items: center; gap: 10px; margin-bottom: 20px;">
+                <svg viewBox="0 0 100 100" class="logo-svg" style="height: 48px; width: 48px; display: block;">
+                    <rect x="0" y="0" width="100" height="100" rx="25" fill="var(--logo-icon-bg)"/>
+                    <path d="M 26 70 V 42 C 26 28, 46 28, 46 42 V 70 M 46 45 C 46 28, 66 28, 66 42 V 52" stroke="var(--logo-icon-fg)" stroke-width="8" stroke-linecap="round" fill="none"/>
+                    <circle cx="70" cy="65" r="18" fill="var(--logo-icon-bg)"/>
+                    <circle cx="70" cy="65" r="15" fill="var(--logo-icon-fg)"/>
+                    <path d="M 62 65 L 68 71 L 78 58" stroke="var(--logo-icon-bg)" stroke-width="4.5" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+                </svg>
+                <div class="logo-text" style="text-align: left;">
+                    <span class="brand-name" style="font-size: 24px; color: var(--logo-text);">moneyed</span>
+                </div>
+            </div>
+
+            <h3>Welcome to Moneyed</h3>
+            <p class="card-subtitle margin-bottom-md" style="font-size: 0.9em;">Sign in or create a new account to securely fetch and track your financial data.</p>
+            
+            <button class="btn btn-outline btn-full margin-top-md" onclick="initiateGoogleLogin()" style="display: flex; align-items: center; justify-content: center; gap: 10px; border-color: #ddd; color: var(--dark-charcoal);">
+                <img src="https://upload.wikimedia.org/wikipedia/commons/5/53/Google_%22G%22_Logo.svg" alt="G" style="height: 20px;">
+                Sign In / Sign Up with Google
+            </button>
+            
+            <div class="margin-top-md" style="font-size: 0.8em; color: #627267;">
+                By proceeding, you agree to Moneyed's <a href="#" style="color: var(--brand-green);">Terms</a> and <a href="#" style="color: var(--brand-green);">Privacy Policy</a>.
+            </div>
+            
+            <!-- Technical Placeholder for Firebase -->
+            <div id="firebase-notice" class="margin-top-md text-left bg-light-grey" style="display: none; padding: 15px; border-radius: 8px; font-size: 0.8em; color: var(--dark-charcoal);">
+                <strong><i class="fa-solid fa-code"></i> Developer Notice:</strong>
+                <p style="margin-top:5px;">To activate real Gmail fetching, you need to connect a Firebase Backend.</p>
+                <ol style="margin-top:5px; padding-left: 15px;">
+                    <li>Create a Project on <b>firebase.google.com</b></li>
+                    <li>Enable "Google" under Authentication > Sign-in method</li>
+                    <li>Paste your Firebase config scripts here in <code>index.html</code></li>
+                </ol>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <script src="app.js"></script>
+</body>
+</html>

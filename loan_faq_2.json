@@ -1,0 +1,158 @@
+{
+  "english": [
+    {
+      "id": "faq_v2_01",
+      "category": "Loan Types",
+      "customer_type": "All",
+      "question": "What exactly is a personal loan and how does it work?",
+      "answer": "A personal loan is an unsecured loan provided by banks and NBFCs that you can use for almost any personal expense. Because it is unsecured, you do not need to pledge any collateral (like property or gold).",
+      "keywords": ["personal", "loan", "what", "exactly", "unsecured"]
+    },
+    {
+      "id": "faq_v2_02",
+      "category": "Loan Comparison",
+      "customer_type": "All",
+      "question": "What is the main difference between a home loan and a personal loan?",
+      "answer": "A home loan is a secured loan used exclusively for buying/building a property, offering longer tenures and lower interest rates. A personal loan is unsecured, flexible in use, with shorter tenures and higher rates.",
+      "keywords": ["difference", "home", "personal", "between", "vs", "versus"]
+    },
+    {
+      "id": "faq_v2_03",
+      "category": "Interest Rate",
+      "customer_type": "All",
+      "question": "What are the current average home loan interest rates in India?",
+      "answer": "As of 2025/2026, home loan interest rates typically range between 7.10% and 11.00% per annum depending on your CIBIL score and lender.",
+      "keywords": ["home", "interest", "rate", "current", "average"]
+    },
+    {
+      "id": "faq_v2_04",
+      "category": "Interest Rate",
+      "customer_type": "All",
+      "question": "How do personal loan interest rates compare to home loan rates right now?",
+      "answer": "Personal loan rates are noticeably higher, generally starting around 8.75% and going up to 24.00% or more, compared to the 7.10% to 11.00% range for home loans.",
+      "keywords": ["compare", "personal", "home", "interest", "rates", "vs", "versus"]
+    },
+    {
+      "id": "faq_v2_05",
+      "category": "Interest Rate",
+      "customer_type": "All",
+      "question": "Why are personal loan interest rates significantly higher than home loan rates?",
+      "answer": "Because personal loans are unsecured, the lender takes on higher risk. With a home loan, the property acts as backing collateral.",
+      "keywords": ["why", "personal", "higher", "home", "interest"]
+    },
+    {
+      "id": "faq_v2_06",
+      "category": "CIBIL Score",
+      "customer_type": "All",
+      "question": "What is a CIBIL score and why is it so important for getting a loan?",
+      "answer": "A CIBIL score is a 3-digit number (300-900) indicating your creditworthiness. A score of 750 or above usually ensures faster approvals and competitive interest rates.",
+      "keywords": ["what", "cibil", "score", "important"]
+    },
+    {
+      "id": "faq_v2_07",
+      "category": "CIBIL Score",
+      "customer_type": "All",
+      "question": "What are some smart strategies to improve my CIBIL score?",
+      "answer": "Pay EMIs/bills on time, keep credit utilization below 30%, limit new credit applications, and keep older credit accounts open.",
+      "keywords": ["smart", "strategies", "improve", "increase", "cibil"]
+    },
+    {
+      "id": "faq_v2_08",
+      "category": "CIBIL Score",
+      "customer_type": "All",
+      "question": "How quickly can I improve my CIBIL score if I start practicing good habits now?",
+      "answer": "Improving CIBIL is a gradual process. With consistent responsible behavior, you can expect to see meaningful improvement within 4 to 12 months.",
+      "keywords": ["how", "quickly", "fast", "improve", "cibil"]
+    },
+    {
+      "id": "faq_v2_09",
+      "category": "CIBIL Score",
+      "customer_type": "All",
+      "question": "Does checking my own CIBIL score lower it?",
+      "answer": "No, checking your own score is a 'soft inquiry' and doesn't impact it. Only lender 'hard inquiries' temporarily lower it.",
+      "keywords": ["checking", "own", "cibil", "lower", "drop"]
+    },
+    {
+      "id": "faq_v2_10",
+      "category": "Repayment & Closure",
+      "customer_type": "All",
+      "question": "What is a loan balance transfer and how does it work?",
+      "answer": "A balance transfer lets you move your outstanding loan balance to a new lender offering a lower interest rate, helping you save money.",
+      "keywords": ["what", "balance", "transfer", "bt", "work"]
+    },
+    {
+      "id": "faq_v2_11",
+      "category": "Repayment & Closure",
+      "customer_type": "All",
+      "question": "What are the main benefits of transferring my home loan or personal loan to another bank?",
+      "answer": "The biggest benefit is securing a lower interest rate, reducing your total interest payout and monthly EMI burden.",
+      "keywords": ["benefits", "transferring", "balance", "transfer", "another", "bank"]
+    },
+    {
+      "id": "faq_v2_12",
+      "category": "Repayment & Closure",
+      "customer_type": "All",
+      "question": "Is a loan balance transfer always beneficial, or are there hidden costs?",
+      "answer": "You must weigh savings against costs like foreclosure charges from your current bank and processing fees from the new bank. It's best for loans with long remaining tenures.",
+      "keywords": ["always", "beneficial", "hidden", "costs", "fees", "balance", "transfer"]
+    },
+    {
+      "id": "faq_v2_13",
+      "category": "Repayment & Closure",
+      "customer_type": "All",
+      "question": "What is a top-up loan and can I get one during a balance transfer?",
+      "answer": "A top-up loan is an additional amount lent over your transferred balance. Yes, it's commonly offered during BTs for debt consolidation or renovations.",
+      "keywords": ["what", "top-up", "top", "up", "balance", "transfer"]
+    },
+    {
+      "id": "faq_v2_14",
+      "category": "Repayment & Closure",
+      "customer_type": "All",
+      "question": "Should I negotiate with my current bank before applying for a balance transfer?",
+      "answer": "Absolutely. Inform your current lender of the competing offer. They may agree to lower your rate to match the market, saving you switching costs.",
+      "keywords": ["negotiate", "current", "bank", "before", "balance", "transfer"]
+    },
+    {
+      "id": "faq_v2_15",
+      "category": "CIBIL Score",
+      "customer_type": "All",
+      "question": "How does my credit utilization ratio affect my CIBIL score?",
+      "answer": "A high ratio (above 30%) suggests you are highly dependent on credit, which lenders view as risky, pulling your score down. Keep balances low relative to limits.",
+      "keywords": ["how", "credit", "utilization", "ratio", "affect", "cibil"]
+    }
+  ],
+  "hinglish": [
+    {
+      "id": "faq_v2_01_h",
+      "category": "Loan Types",
+      "customer_type": "All",
+      "question": "kya hota hai personal loan aur yeh kaise kaam karta hai?",
+      "answer": "Personal loan ek unsecured loan hai. Matlab iske liye aapko koi collateral (jaise property ya gold) girvi nahi rakhna padta. Banks aapki income aur CIBIL dekh kar ise approve karte hain.",
+      "keywords": ["kya", "hota", "personal", "loan", "kaise"]
+    },
+    {
+      "id": "faq_v2_02_h",
+      "category": "Loan Comparison",
+      "customer_type": "All",
+      "question": "home loan aur personal loan mein main difference kya hai?",
+      "answer": "Home loan property kharidne ke liye ek secured loan hai, jisme rate kam aur tenure lamba hota hai. Personal loan unsecured hota hai, jo kisi bhi zarurat ke liye use ho sakta hai par iska rate high hota hai.",
+      "keywords": ["home", "personal", "difference", "farak", "kya"]
+    },
+    {
+      "id": "faq_v2_03_h",
+      "category": "Interest Rate",
+      "customer_type": "All",
+      "question": "abhi home loan ka interest rate kya chal raha hai?",
+      "answer": "2025/2026 mein average home loan rates 7.10% se 11.00% ke beech chal rahe hain. Yeh aapke CIBIL score par depend karta hai.",
+      "keywords": ["home", "loan", "interest", "rate", "kitna", "chal", "raha"]
+    },
+    {
+      "id": "faq_v2_10_h",
+      "category": "Repayment & Closure",
+      "customer_type": "All",
+      "question": "loan balance transfer (BT) kya hai aur iske fayde kya hain?",
+      "answer": "Balance transfer (BT) ka matlab hai apne chalte hue high-interest loan ko kisi dusre bank me shift karna jahan rate kam ho. Isse aapka EMI burden aur total interest bach jata hai.",
+      "keywords": ["loan", "balance", "transfer", "bt", "fayde", "kya"]
+    }
+  ]
+}
