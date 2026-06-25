@@ -1,0 +1,18 @@
+{
+  "name": "Moneyed Finance",
+  "short_name": "Moneyed",
+  "description": "Premium Debt Structuring & Financial Intelligence.",
+  "start_url": "/index.html",
+  "display": "standalone",
+  "background_color": "#111b15",
+  "theme_color": "#1fa463",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "/assets/app-icon.png",
+      "sizes": "192x192 512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}
