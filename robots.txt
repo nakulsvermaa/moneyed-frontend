@@ -1,0 +1,3 @@
+User-agent: *
+Allow: /
+Sitemap: https://moneyed.co.in/sitemap.xml

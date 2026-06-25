@@ -6,7 +6,7 @@ const API_BASE_URL = "https://moneyed-backend.onrender.com"; // CONNECTED TO REN
 // --- FIREBASE DATABASE CONFIGURATION ---
 const firebaseConfig = {
   apiKey: "AIzaSyCNvpsTa9fd_IcVgbw_FVxTa_sATilRIRc",
-  authDomain: "moneyedweb.web.app",
+  authDomain: "moneyed.co.in",
   projectId: "moneyedweb",
   storageBucket: "moneyedweb.firebasestorage.app",
   messagingSenderId: "1023777532971",
@@ -33,81 +33,17 @@ let userProfile = {
 let leads = [];
 let indiaCities = [];
 
-// Mock Initial Leads for CRM Demonstration
-const mockLeads = [
-    {
-        id: "L-1024",
-        name: "Amit Sharma",
-        phone: "9876543210",
-        city: "Delhi NCR",
-        empType: "salaried",
-        income: 85000,
-        company: "TCS",
-        companyCat: "A",
-        loanReq: 500000,
-        cibil: 745,
-        obligations: 20000,
-        pincode: "110001",
-        source: "Eligibility Check",
-        status: "New",
-        date: "2026-05-23",
-        remarks: "Customer has a high interest personal loan with HDFC. Looking for Balance Transfer options.",
-        history: [{ date: "2026-05-23", text: "Lead registered via online Eligibility form." }]
-    },
-    {
-        id: "L-1025",
-        name: "Priya Patel",
-        phone: "9812345678",
-        city: "Mumbai",
-        empType: "salaried",
-        income: 120000,
-        company: "Google India",
-        companyCat: "A",
-        loanReq: 1500000,
-        cibil: 790,
-        obligations: 15000,
-        pincode: "400001",
-        source: "CIBIL Analyzer",
-        status: "Approved",
-        date: "2026-05-22",
-        remarks: "Excellent credit score. Matches HDFC & Bajaj policies perfectly. Axis approved interest rate at 10.25%.",
-        history: [
-            { date: "2026-05-22", text: "Lead registered via CIBIL Analyzer manual entry." },
-            { date: "2026-05-23", text: "Axis loan pre-approved. Sent options to client." }
-        ]
-    },
-    {
-        id: "L-1026",
-        name: "Vikram Singh",
-        phone: "8899001122",
-        city: "Jaipur",
-        empType: "self-employed",
-        income: 60000,
-        company: "Singh Trading Corp",
-        companyCat: "D",
-        loanReq: 300000,
-        cibil: 610,
-        obligations: 30000,
-        pincode: "302001",
-        source: "Booking Consultation",
-        status: "Follow-Up",
-        date: "2026-05-21",
-        remarks: "FOIR is high at 50%. CIBIL is weak due to past write-off in credit card. Advised CIBIL consolidation call.",
-        history: [
-            { date: "2026-05-21", text: "Lead created via call booking request." },
-            { date: "2026-05-22", text: "Called client. Explained high-FOIR risk. Scheduled debt restructing discussion." }
-        ]
-    }
-];
+// No mock leads in production — real leads come from Firebase
 
 // Document Ready Initialization
-document.addEventListener("DOMContentLoaded", () => {
-    initApp();
-    setupEventListeners();
-    setupCalculators();
-    setupCibilUpload();
-    setupBookingCalendar();
-});
+function bootstrapApp() {
+    try { initApp(); } catch(e) { console.error('Error in initApp:', e); }
+    try { setupEventListeners(); } catch(e) { console.error('Error in setupEventListeners:', e); }
+    try { setupCalculators(); } catch(e) { console.error('Error in setupCalculators:', e); }
+    // setupCibilUpload(); // Removed to prevent ReferenceError
+    try { setupBookingCalendar(); } catch(e) { console.error('Error in setupBookingCalendar:', e); }
+}
+// Initialization will be called explicitly at the end of the HTML body to prevent external resource blocking.
 
 // App Base Configuration
 function initApp() {
@@ -116,8 +52,7 @@ function initApp() {
     if (storedLeads) {
         leads = JSON.parse(storedLeads);
     } else {
-        leads = [...mockLeads];
-        localStorage.setItem("moneyed_leads", JSON.stringify(leads));
+        leads = [];
     }
     
     // Update global CRM metrics
@@ -129,15 +64,22 @@ function initApp() {
     
     // Initialize Theme
     initTheme();
+
+    // Load initial dashboard
+    window.switchTab('home-tab');
 }
 
 async function loadCities() {
     try {
         const response = await fetch('cities.json');
+        if (!response.ok) throw new Error('cities.json not found');
         indiaCities = await response.json();
         setupCityAutocomplete();
     } catch (e) {
-        console.error("Failed to load cities JSON:", e);
+        // Fallback: allow free-text city entry without autocomplete
+        indiaCities = [];
+        const input = document.getElementById("elig-city");
+        if (input) input.placeholder = "Type your city name";
     }
 }
 
@@ -182,16 +124,30 @@ function setupCityAutocomplete() {
 // Event Listeners setup
 function setupEventListeners() {
     // Sidebar SPA Tab Routing
-    document.querySelectorAll(".nav-item").forEach(item => {
+    document.querySelectorAll(".nav-link").forEach(item => {
+        item.addEventListener("click", (e) => {
+            e.preventDefault();
+            const tabId = item.parentElement.getAttribute("data-tab");
+            if (tabId) {
+                switchTab(tabId);
+            }
+            // Close mobile menu if open
+            const sidebar = document.getElementById("app-sidebar");
+            if (sidebar && sidebar.classList.contains("menu-open")) {
+                sidebar.classList.remove("menu-open");
+                const overlay = document.getElementById("mobile-overlay");
+                if(overlay) overlay.style.display = "none";
+            }
+        });
+    });
+
+    // Bottom Navigation Routing
+    document.querySelectorAll(".bnav-item").forEach(item => {
         item.addEventListener("click", (e) => {
             e.preventDefault();
             const tabId = item.getAttribute("data-tab");
-            switchTab(tabId);
-            
-            // Close mobile menu if open
-            const sidebar = document.getElementById("app-sidebar");
-            if (sidebar.classList.contains("menu-open")) {
-                sidebar.classList.remove("menu-open");
+            if (tabId) {
+                switchTab(tabId);
             }
         });
     });
@@ -223,23 +179,47 @@ function setupEventListeners() {
 
 // Tab Switching Routing Function
 function switchTab(tabId) {
+    // CRM tab is admin-only — block access if not authenticated as admin
+    if (tabId === 'crm-tab') {
+        const adminEmails = ["nakulsverma@gmail.com", "help@moneyed.co.in"];
+        const user = (typeof auth !== 'undefined') ? auth.currentUser : null;
+        if (!user || !adminEmails.includes(user.email)) {
+            openAuthModal();
+            return;
+        }
+    }
     currentTab = tabId;
     
-    // Toggle Active State in Navigation List
-    document.querySelectorAll(".nav-item").forEach(item => {
-        if (item.getAttribute("data-tab") === tabId) {
-            item.classList.add("active");
-        } else {
-            item.classList.remove("active");
+    // 2. Update Sidebar Navigation Active State
+    document.querySelectorAll(".nav-link").forEach(link => {
+        link.parentElement.classList.remove("active");
+        if (link.parentElement.getAttribute("data-tab") === tabId) {
+            link.parentElement.classList.add("active");
         }
     });
+
+    // 3. Update Bottom Navigation Active State
+    document.querySelectorAll(".bnav-item").forEach(item => {
+        item.classList.remove("active");
+        if (item.getAttribute("data-tab") === tabId) {
+            item.classList.add("active");
+        }
+    });
+
+    // 4. Smooth scroll to top
+    window.scrollTo(0, 0);
 
     // Toggle Visible Tab Pane
     document.querySelectorAll(".tab-pane").forEach(pane => {
         if (pane.id === tabId) {
             pane.classList.add("active");
+            // Re-trigger animation
+            pane.classList.remove("fade-in-up");
+            void pane.offsetWidth; // trigger reflow
+            pane.classList.add("fade-in-up");
         } else {
             pane.classList.remove("active");
+            pane.classList.remove("fade-in-up");
         }
     });
 
@@ -275,7 +255,7 @@ function switchTab(tabId) {
             break;
         case 'booking-tab':
             titleEl.textContent = "Schedule Advisory Session";
-            subtitleEl.textContent = "Reserve a 1-on-1 call with Nakul Verma to structure your loans.";
+            subtitleEl.textContent = "Reserve a 1-on-1 call with our Financial Experts to structure your loans.";
             break;
         case 'crm-tab':
             titleEl.textContent = "Admin CRM Console";
@@ -367,6 +347,20 @@ function processEligibility() {
     userProfile.income = income;
     userProfile.cibil = cibil;
     userProfile.obligations = obligations;
+
+    // Send to Unified CRM
+    window.syncToCRM("Eligibility Check", {
+        name: name,
+        phone: phone,
+        city: city,
+        empType: empType,
+        income: income,
+        company: company,
+        loanReq: loanReq,
+        cibil: cibil,
+        obligations: obligations,
+        pincode: pincode
+    });
     
     // Calculate FOIR (Fixed Obligation to Income Ratio)
     const foir = Math.round((obligations / income) * 100);
@@ -564,918 +558,6 @@ function processEligibility() {
     document.getElementById("eligibility-results").scrollIntoView({ behavior: 'smooth' });
 }
 
-// 3. CALCULATORS SUITE LOGIC
-function setupCalculators() {
-    // Calculators Sub-tabs Toggle
-    document.querySelectorAll(".sub-tab-btn").forEach(btn => {
-        btn.addEventListener("click", () => {
-            const container = btn.closest(".calculator-sub-tabs").nextElementSibling;
-            
-            // Switch tabs
-            btn.closest(".calculator-sub-tabs").querySelectorAll(".sub-tab-btn").forEach(b => b.classList.remove("active"));
-            btn.classList.add("active");
-
-            // Toggle panes
-            const subtabId = btn.getAttribute("data-subtab");
-            document.querySelectorAll(".sub-tab-pane").forEach(pane => {
-                if (pane.id === subtabId) {
-                    pane.classList.add("active");
-                } else {
-                    pane.classList.remove("active");
-                }
-            });
-        });
-    });
-
-    // EMI Calculator sync inputs
-    const emiAmountRange = document.getElementById("emi-amount");
-    const emiAmountVal = document.getElementById("emi-amount-val");
-    const emiRoiRange = document.getElementById("emi-roi");
-    const emiRoiVal = document.getElementById("emi-roi-val");
-    const emiTenureRange = document.getElementById("emi-tenure");
-    const emiTenureVal = document.getElementById("emi-tenure-val");
-
-    function runEmiCalc() {
-        const principal = parseFloat(emiAmountVal.value) || 0;
-        const roi = parseFloat(emiRoiVal.value) || 0;
-        const tenureYrs = parseFloat(emiTenureVal.value) || 0;
-
-        const monthlyRate = roi / (12 * 100);
-        const totalMonths = tenureYrs * 12;
-
-        let emi = 0;
-        if (monthlyRate > 0) {
-            emi = principal * monthlyRate * Math.pow(1 + monthlyRate, totalMonths) / (Math.pow(1 + monthlyRate, totalMonths) - 1);
-        } else {
-            emi = principal / totalMonths;
-        }
-
-        const totalPayable = emi * totalMonths;
-        const totalInterest = totalPayable - principal;
-
-        document.getElementById("calc-emi-result").textContent = Math.round(emi).toLocaleString('en-IN');
-        document.getElementById("calc-principal-result").innerHTML = `<i class="fa-solid fa-indian-rupee-sign" style="font-size: 0.9em; margin-right: 2px;"></i>${Math.round(principal).toLocaleString('en-IN')}`;
-        document.getElementById("calc-interest-result").innerHTML = `<i class="fa-solid fa-indian-rupee-sign" style="font-size: 0.9em; margin-right: 2px;"></i>${Math.round(totalInterest).toLocaleString('en-IN')}`;
-        document.getElementById("calc-payable-result").innerHTML = `<i class="fa-solid fa-indian-rupee-sign" style="font-size: 0.9em; margin-right: 2px;"></i>${Math.round(totalPayable).toLocaleString('en-IN')}`;
-        
-        if (typeof generateEmiSchedule === "function") {
-            generateEmiSchedule(principal, monthlyRate, totalMonths, emi);
-        }
-    }
-
-    // Sync functions
-    function syncInputRange(input, range, callback) {
-        input.addEventListener("input", () => {
-            range.value = input.value;
-            callback();
-        });
-        range.addEventListener("input", () => {
-            input.value = range.value;
-            callback();
-        });
-    }
-
-    syncInputRange(emiAmountVal, emiAmountRange, runEmiCalc);
-    syncInputRange(emiRoiVal, emiRoiRange, runEmiCalc);
-    syncInputRange(emiTenureVal, emiTenureRange, runEmiCalc);
-    runEmiCalc();
-
-    // Balance Transfer savings calc trigger
-    const btInputs = ["bt-current-pos", "bt-current-roi", "bt-current-months", "bt-target-roi", "bt-target-months"];
-    btInputs.forEach(id => {
-        document.getElementById(id).addEventListener("input", calculateBtSavings);
-    });
-    calculateBtSavings();
-
-    // FOIR Calc inputs triggers
-    const foirInputs = ["foir-income", "foir-rent", "foir-other-emi", "foir-cc-due"];
-    foirInputs.forEach(id => {
-        document.getElementById(id).addEventListener("input", runFoirCalc);
-    });
-    runFoirCalc();
-    
-    // Part-Payment listeners
-    const ppInputs = ["pp-principal", "pp-roi", "pp-months", "pp-amount"];
-    ppInputs.forEach(id => {
-        const el = document.getElementById(id);
-        if (el) el.addEventListener("input", calculatePartPayment);
-    });
-    if (document.getElementById("pp-principal")) calculatePartPayment();
-    
-    // Hybrid OD listeners
-    const odInputs = ["od-limit", "od-roi", "od-tenure", "od-withdrawn", "od-month-check"];
-    odInputs.forEach(id => {
-        const el = document.getElementById(id);
-        if (el) el.addEventListener("input", calculateHybridOD);
-    });
-    if (document.getElementById("od-limit")) calculateHybridOD();
-}
-
-// Balance Transfer Savings Logic
-function calculateBtSavings() {
-    const pos = parseFloat(document.getElementById("bt-current-pos").value) || 0;
-    const currentRoi = parseFloat(document.getElementById("bt-current-roi").value) || 0;
-    const currentMonths = parseFloat(document.getElementById("bt-current-months").value) || 0;
-    const targetRoi = parseFloat(document.getElementById("bt-target-roi").value) || 0;
-    const targetMonths = parseFloat(document.getElementById("bt-target-months").value) || 0;
-
-    if (pos <= 0 || currentRoi <= 0 || currentMonths <= 0 || targetRoi <= 0 || targetMonths <= 0) {
-        return;
-    }
-
-    // Calculate current EMI
-    const rCurrent = currentRoi / (12 * 100);
-    const emiCurrent = pos * rCurrent * Math.pow(1 + rCurrent, currentMonths) / (Math.pow(1 + rCurrent, currentMonths) - 1);
-    const totalPayableCurrent = emiCurrent * currentMonths;
-    const totalInterestCurrent = totalPayableCurrent - pos;
-
-    // Calculate target EMI
-    const rTarget = targetRoi / (12 * 100);
-    const emiTarget = pos * rTarget * Math.pow(1 + rTarget, targetMonths) / (Math.pow(1 + rTarget, targetMonths) - 1);
-    const totalPayableTarget = emiTarget * targetMonths;
-    const totalInterestTarget = totalPayableTarget - pos;
-
-    const interestSaved = Math.max(0, totalInterestCurrent - totalInterestTarget);
-    const monthlySaving = Math.max(0, emiCurrent - emiTarget);
-
-    document.getElementById("bt-savings-result").textContent = Math.round(interestSaved).toLocaleString('en-IN');
-    document.getElementById("bt-current-emi").innerHTML = `<i class="fa-solid fa-indian-rupee-sign" style="font-size: 0.9em; margin-right: 2px;"></i>${Math.round(emiCurrent).toLocaleString('en-IN')}`;
-    document.getElementById("bt-new-emi").innerHTML = `<i class="fa-solid fa-indian-rupee-sign" style="font-size: 0.9em; margin-right: 2px;"></i>${Math.round(emiTarget).toLocaleString('en-IN')}`;
-    document.getElementById("bt-monthly-saving").innerHTML = `<i class="fa-solid fa-indian-rupee-sign" style="font-size: 0.9em; margin-right: 2px;"></i>${Math.round(monthlySaving).toLocaleString('en-IN')} / mo`;
-
-    // Update global state & Dashboard Opportunity Card
-    userProfile.savings = Math.round(interestSaved);
-    document.getElementById("home-savings-val").textContent = Math.round(interestSaved).toLocaleString('en-IN');
-}
-
-function applyForBT() {
-    const pos = document.getElementById("bt-current-pos").value;
-    const currentRoi = document.getElementById("bt-current-roi").value;
-    const savings = document.getElementById("bt-savings-result").textContent;
-
-    // Auto set scheduler topic and fill booking info
-    document.getElementById("book-topic").value = "Debt Consolidation";
-    
-    // Auto lead insertion on booking tab click
-    switchTab('booking-tab');
-    
-    // Alert info
-    alert(`Transfer request details loaded for ₹${parseFloat(pos).toLocaleString('en-IN')}. Estimated interest savings are ₹${savings}. Please complete consultation booking to submit files.`);
-}
-
-// FOIR Calculation Logic
-function runFoirCalc() {
-    const income = parseFloat(document.getElementById("foir-income").value) || 0;
-    const rent = parseFloat(document.getElementById("foir-rent").value) || 0;
-    const otherEmi = parseFloat(document.getElementById("foir-other-emi").value) || 0;
-    const ccOutstanding = parseFloat(document.getElementById("foir-cc-due").value) || 0;
-
-    if (income <= 0) return;
-
-    // Obligations includes 5% of credit card outstandings as standard bank rule
-    const ccObligation = ccOutstanding * 0.05;
-    const totalObligations = rent + otherEmi + ccObligation;
-    const foir = Math.round((totalObligations / income) * 100);
-
-    const resultEl = document.getElementById("foir-result-val");
-    const badgeEl = document.getElementById("foir-status-badge");
-    const descEl = document.getElementById("foir-alert-text");
-
-    resultEl.textContent = `${foir}%`;
-    
-    if (foir <= 40) {
-        badgeEl.textContent = "Safe Profile";
-        badgeEl.className = "badge text-green";
-        descEl.innerHTML = `Your fixed obligations constitute <strong>${foir}%</strong> of your net income. This is considered healthy, and you have significant borrowing bandwidth.`;
-    } else if (foir <= 55) {
-        badgeEl.textContent = "Moderate Risk";
-        badgeEl.className = "badge text-yellow";
-        descEl.innerHTML = `Obligations are at <strong>${foir}%</strong>. Bajaj & HDFC might approve your loan but require Category A employer verification.`;
-    } else {
-        badgeEl.textContent = "Critical Overload";
-        badgeEl.className = "badge text-red";
-        descEl.innerHTML = `Obligations are high at <strong>${foir}%</strong>. It's difficult to get approved for standard personal loans. A debt consolidation call with Nakul Verma is highly recommended.`;
-    }
-}
-
-function syncFoirToDashboard() {
-    const foirText = document.getElementById("foir-result-val").textContent;
-    const foirVal = parseInt(foirText);
-    
-    userProfile.foir = foirVal;
-    document.getElementById("home-foir-val").textContent = foirText;
-    
-    const foirBar = document.getElementById("home-foir-bar");
-    foirBar.style.width = `${Math.min(100, foirVal)}%`;
-    
-    const dashboardBadge = document.getElementById("home-foir-badge");
-    if (foirVal <= 40) {
-        foirBar.style.backgroundColor = "var(--brand-green)";
-        dashboardBadge.textContent = "Safe Profile";
-        dashboardBadge.className = "badge text-green";
-    } else if (foirVal <= 55) {
-        foirBar.style.backgroundColor = "var(--accent-yellow)";
-        dashboardBadge.textContent = "Moderate Risk";
-        dashboardBadge.className = "badge text-yellow";
-    } else {
-        foirBar.style.backgroundColor = "#dc3545";
-        dashboardBadge.textContent = "Critical Overload";
-        dashboardBadge.className = "badge text-red";
-    }
-    
-    alert("FOIR Score synced to Home Dashboard successfully!");
-}
-
-// Part-Payment Savings Calculator Logic
-function calculatePartPayment() {
-    const principal = parseFloat(document.getElementById("pp-principal").value) || 0;
-    const roi = parseFloat(document.getElementById("pp-roi").value) || 0;
-    const months = parseFloat(document.getElementById("pp-months").value) || 0;
-    const defaultPartPayment = parseFloat(document.getElementById("pp-amount").value) || 0;
-
-    if (principal <= 0 || roi <= 0 || months <= 0) return;
-
-    const r = roi / (12 * 100);
-    const emi = principal * r * Math.pow(1 + r, months) / (Math.pow(1 + r, months) - 1);
-    const originalTotalInterest = (emi * months) - principal;
-
-    window.ppCustomPayments = window.ppCustomPayments || {};
-    if (window.lastDefaultPP !== defaultPartPayment) {
-        window.ppCustomPayments = {};
-        window.lastDefaultPP = defaultPartPayment;
-    }
-
-    const tbody = document.getElementById("pp-schedule-body");
-    let balance = principal;
-    let schedule = [];
-    let newTotalInterest = 0;
-    let newMonths = 0;
-
-    if (tbody) tbody.innerHTML = "";
-
-    for (let m = 1; m <= months; m++) {
-        let interest = balance * r;
-        let principalPaid = emi - interest;
-        
-        let ppThisMonth = window.ppCustomPayments[m] !== undefined ? window.ppCustomPayments[m] : (m === 1 ? defaultPartPayment : 0);
-        let totalPaidThisMonth = principalPaid + ppThisMonth;
-        
-        if (balance - totalPaidThisMonth < 0) {
-            totalPaidThisMonth = balance;
-            ppThisMonth = Math.max(0, totalPaidThisMonth - principalPaid);
-        }
-        
-        let closing = balance - totalPaidThisMonth;
-        if (closing < 0) closing = 0;
-        
-        schedule.push({
-            Month: m,
-            Opening: balance,
-            EMI: emi,
-            PartPayment: ppThisMonth,
-            Interest: interest,
-            Principal: totalPaidThisMonth,
-            Closing: closing
-        });
-        
-        newTotalInterest += interest;
-        newMonths = m;
-
-        let isEditable = document.getElementById("pp-toggle") ? document.getElementById("pp-toggle").value === 'yes' : false;
-        let disabledAttr = isEditable ? '' : 'disabled';
-
-        if (tbody) {
-            let tr = document.createElement("tr");
-            tr.innerHTML = `
-                <td>${m}</td>
-                <td>${formatCurrency(balance)}</td>
-                <td>${formatCurrency(emi)}</td>
-                <td>
-                    <input type="number" class="table-inline-input" value="${ppThisMonth === 0 ? '' : ppThisMonth}" placeholder="0" data-month="${m}" onchange="updateCustomPP(this.getAttribute('data-month'), this.value)" ${disabledAttr}>
-                </td>
-                <td>${formatCurrency(interest)}</td>
-                <td>${formatCurrency(totalPaidThisMonth)}</td>
-                <td>${formatCurrency(closing)}</td>
-            `;
-            tbody.appendChild(tr);
-        }
-        
-        balance = closing;
-        if (balance <= 0) break;
-    }
-    window.scheduleData.pp = schedule;
-
-    const interestSaved = Math.max(0, originalTotalInterest - newTotalInterest);
-    const tenureSaved = Math.max(0, months - newMonths);
-
-    document.getElementById("pp-interest-saved").textContent = Math.round(interestSaved).toLocaleString('en-IN');
-    document.getElementById("pp-old-interest").innerHTML = `<i class="fa-solid fa-indian-rupee-sign" style="font-size: 0.9em; margin-right: 2px;"></i>${Math.round(originalTotalInterest).toLocaleString('en-IN')}`;
-    document.getElementById("pp-new-interest").innerHTML = `<i class="fa-solid fa-indian-rupee-sign" style="font-size: 0.9em; margin-right: 2px;"></i>${Math.round(newTotalInterest).toLocaleString('en-IN')}`;
-    document.getElementById("pp-tenure-saved").textContent = `${Math.ceil(tenureSaved)} Months`;
-}
-
-window.togglePP = function() {
-    calculatePartPayment();
-    if(document.getElementById('pp-toggle').value === 'yes') {
-        document.getElementById('pp-schedule-container').scrollIntoView({behavior: 'smooth', block: 'start'});
-    }
-}
-
-window.updateCustomPP = function(month, val) {
-    let amount = parseFloat(val) || 0;
-    
-    if (window.scheduleData && window.scheduleData.pp && window.scheduleData.pp[month - 1]) {
-        const maxAllowed = 0.99 * window.scheduleData.pp[month - 1].Opening;
-        if (amount > maxAllowed) {
-            amount = maxAllowed;
-            alert("Part-payment cannot exceed 99% of the outstanding balance (₹ " + Math.round(maxAllowed).toLocaleString('en-IN') + ")");
-        }
-    }
-    
-    window.ppCustomPayments = window.ppCustomPayments || {};
-    window.ppCustomPayments[month] = amount;
-    calculatePartPayment();
-}
-
-// Hybrid Dropline Overdraft Logic
-function updateODFixedText() {
-    const select = document.getElementById("od-fixed-months");
-    const display = document.getElementById("od-fixed-text-display");
-    if (select && display) {
-        display.textContent = select.options[select.selectedIndex].text;
-    }
-}
-function calculateHybridOD() {
-    const limit = parseFloat(document.getElementById("od-limit").value) || 0;
-    const roi = parseFloat(document.getElementById("od-roi").value) || 0;
-    let tenure = parseInt(document.getElementById("od-tenure").value) || 0;
-    const initialWithdrawn = parseFloat(document.getElementById("od-withdrawn").value) || 0;
-    
-    const fixedMonthsSelect = document.getElementById("od-fixed-months");
-    const fixedMonths = fixedMonthsSelect ? parseInt(fixedMonthsSelect.value) : 12;
-    
-    // Auto-calculate check month based on tenure and fixed period
-    let checkMonth = Math.max(1, tenure - fixedMonths);
-    const monthCheckEl = document.getElementById("od-month-check");
-    if(monthCheckEl) monthCheckEl.value = checkMonth;
-    
-    // Update Fixed Period Display in Results
-    const dispFixedEl = document.getElementById("od-disp-fixed-period");
-    if(dispFixedEl) dispFixedEl.textContent = fixedMonths + " Months";
-
-    if (limit <= 0 || roi <= 0 || tenure <= 0) return;
-
-    window.odCustomWithdrawals = window.odCustomWithdrawals || {};
-    window.odCustomDeposits = window.odCustomDeposits || {};
-    if (window.lastInitialWithdrawn !== initialWithdrawn) {
-        window.odCustomWithdrawals = {};
-        window.odCustomDeposits = {};
-        window.lastInitialWithdrawn = initialWithdrawn;
-    }
-
-    const tbody = document.getElementById("od-schedule-body");
-    if (tbody) tbody.innerHTML = "";
-
-    let dropAmount = 0;
-    if (tenure > fixedMonths) {
-        dropAmount = limit / (tenure - fixedMonths);
-    }
-
-    let schedule = [];
-    let currentLimit = limit;
-    let balance = initialWithdrawn; 
-    let limitAtMonth = limit;
-    let month1Interest = 0;
-
-    for (let m = 1; m <= tenure; m++) {
-        if (m > fixedMonths) {
-            currentLimit = Math.max(0, currentLimit - dropAmount);
-        }
-        
-        let userWithdrawal = window.odCustomWithdrawals[m] !== undefined ? window.odCustomWithdrawals[m] : 0;
-        let userDeposit = window.odCustomDeposits[m] !== undefined ? window.odCustomDeposits[m] : 0;
-        
-        let limitDropThisMonth = m > fixedMonths ? dropAmount : 0;
-        let availableLimit = Math.max(0, currentLimit - balance);
-        
-        let opening = balance;
-        balance += userWithdrawal - userDeposit;
-        
-        let forcedDeposit = 0;
-        if (balance > currentLimit) {
-            forcedDeposit = balance - currentLimit;
-            balance = currentLimit;
-        }
-        
-        let interest = balance * (roi / 100) / 12;
-        if (m === 1) month1Interest = interest;
-        if (m === checkMonth) limitAtMonth = currentLimit;
-        
-        let installment = interest + forcedDeposit;
-        
-        schedule.push({
-            Month: m,
-            Limit: currentLimit,
-            LimitDrop: limitDropThisMonth,
-            AvailableLimit: availableLimit,
-            Opening: opening + forcedDeposit,
-            Withdrawal: userWithdrawal - forcedDeposit,
-            PartPayment: userDeposit,
-            Installment: installment,
-            Principal: forcedDeposit,
-            Interest: interest,
-            Closing: balance
-        });
-        
-        let isEditable = document.getElementById("od-toggle") ? document.getElementById("od-toggle").value === 'yes' : false;
-        let disabledAttr = isEditable ? '' : 'disabled';
-
-        if (tbody) {
-            let tr = document.createElement("tr");
-            tr.innerHTML = `
-                <td>${m}</td>
-                <td>${formatCurrency(currentLimit)}</td>
-                <td>${formatCurrency(limitDropThisMonth)}</td>
-                <td>${formatCurrency(availableLimit)}</td>
-                <td>${formatCurrency(opening + forcedDeposit)}</td>
-                <td>
-                    <input type="number" class="table-inline-input ${forcedDeposit > 0 ? 'text-red' : ''}" 
-                           value="${userWithdrawal !== 0 ? userWithdrawal : ''}" 
-                           placeholder="${forcedDeposit > 0 ? '-'+Math.round(forcedDeposit) : '0'}" 
-                           data-month="${m}" 
-                           onchange="updateCustomODWithdrawal(this.getAttribute('data-month'), this.value)" ${disabledAttr}>
-                </td>
-                <td>
-                    <input type="number" class="table-inline-input" 
-                           value="${userDeposit !== 0 ? userDeposit : ''}" 
-                           placeholder="0" 
-                           data-month="${m}" 
-                           onchange="updateCustomODDeposit(this.getAttribute('data-month'), this.value)" ${disabledAttr}>
-                </td>
-                <td>${formatCurrency(installment)}</td>
-                <td>${formatCurrency(forcedDeposit)}</td>
-                <td>${formatCurrency(interest)}</td>
-                <td>${formatCurrency(balance)}</td>
-            `;
-            tbody.appendChild(tr);
-        }
-        
-        if (currentLimit <= 0 && balance <= 0 && m > fixedMonths) break;
-    }
-    window.scheduleData.od = schedule;
-
-    document.getElementById("od-monthly-interest").textContent = Math.round(month1Interest).toLocaleString('en-IN');
-    document.getElementById("od-disp-month").textContent = checkMonth;
-    document.getElementById("od-limit-at-month").innerHTML = `<i class="fa-solid fa-indian-rupee-sign" style="font-size: 0.9em; margin-right: 2px;"></i>${Math.round(limitAtMonth).toLocaleString('en-IN')}`;
-    document.getElementById("od-drop-amount").innerHTML = `<i class="fa-solid fa-indian-rupee-sign" style="font-size: 0.9em; margin-right: 2px;"></i>${Math.round(dropAmount).toLocaleString('en-IN')}`;
-}
-
-window.toggleOD = function() {
-    calculateHybridOD();
-    if(document.getElementById('od-toggle').value === 'yes') {
-        document.getElementById('od-schedule-container').scrollIntoView({behavior: 'smooth', block: 'start'});
-    }
-}
-
-window.updateCustomODWithdrawal = function(month, val) {
-    let amount = parseFloat(val) || 0;
-    if (window.scheduleData && window.scheduleData.od && window.scheduleData.od[month - 1]) {
-        const row = window.scheduleData.od[month - 1];
-        const maxWithdrawal = row.AvailableLimit;
-        if (amount > maxWithdrawal) {
-            amount = maxWithdrawal;
-            alert("Withdrawal cannot exceed Available Limit (₹ " + Math.round(maxWithdrawal).toLocaleString('en-IN') + ")");
-        }
-    }
-    window.odCustomWithdrawals = window.odCustomWithdrawals || {};
-    window.odCustomWithdrawals[month] = amount;
-    calculateHybridOD();
-}
-
-window.updateCustomODDeposit = function(month, val) {
-    let amount = parseFloat(val) || 0;
-    if (window.scheduleData && window.scheduleData.od && window.scheduleData.od[month - 1]) {
-        const row = window.scheduleData.od[month - 1];
-        const maxDeposit = 0.99 * row.Opening;
-        if (amount > maxDeposit) {
-            amount = maxDeposit;
-            alert("Part-payment cannot exceed 99% of the outstanding balance (₹ " + Math.round(maxDeposit).toLocaleString('en-IN') + ")");
-        }
-    }
-    window.odCustomDeposits = window.odCustomDeposits || {};
-    window.odCustomDeposits[month] = amount;
-    calculateHybridOD();
-}
-
-// Global variable to store uploaded PDF file (sent only when user clicks "Run CIBIL Assessment")
-window.pendingCibilFile = null;
-
-function setupCibilUpload() {
-    const dropZone = document.getElementById("cibil-drop-zone");
-    const fileInput = document.getElementById("cibil-file-input");
-
-    dropZone.addEventListener("click", () => fileInput.click());
-
-    dropZone.addEventListener("dragover", (e) => {
-        e.preventDefault();
-        dropZone.style.borderColor = "var(--brand-green)";
-        dropZone.style.backgroundColor = "rgba(31, 164, 99, 0.05)";
-    });
-
-    dropZone.addEventListener("dragleave", () => {
-        dropZone.style.borderColor = "rgba(15, 92, 59, 0.3)";
-        dropZone.style.backgroundColor = "rgba(15, 92, 59, 0.01)";
-    });
-
-    dropZone.addEventListener("drop", (e) => {
-        e.preventDefault();
-        dropZone.style.borderColor = "rgba(15, 92, 59, 0.3)";
-        dropZone.style.backgroundColor = "rgba(15, 92, 59, 0.01)";
-        const files = e.dataTransfer.files;
-        if (files.length > 0 && files[0].type === "application/pdf") {
-            storeCibilFile(files[0]);
-        } else {
-            alert("Only PDF format report uploads are supported.");
-        }
-    });
-
-    fileInput.addEventListener("change", () => {
-        if (fileInput.files.length > 0) {
-            storeCibilFile(fileInput.files[0]);
-        }
-    });
-}
-
-// STEP 1: User uploads PDF — we just store it and show confirmation
-function storeCibilFile(fileObj) {
-    window.pendingCibilFile = fileObj;
-    const placeholder = document.getElementById("cibil-placeholder");
-    placeholder.innerHTML = `
-        <i class="fa-regular fa-file-pdf text-red" style="font-size: 2.5rem; margin-bottom: 1rem;"></i>
-        <h4 style="color: var(--brand-green);">✅ PDF Ready: ${fileObj.name}</h4>
-        <p class="text-secondary" style="font-size: 13px;">Click <strong>"Run CIBIL Assessment"</strong> below to extract data</p>
-        <div class="secure-badge margin-top-sm">Secure DPDP Parsing</div>
-    `;
-}
-
-// STEP 2: User clicks "Run CIBIL Assessment" — NOW we send to backend
-async function handleRealCibilUpload(fileObj) {
-    const fileName = fileObj.name;
-    const placeholder = document.getElementById("cibil-placeholder");
-
-    placeholder.innerHTML = `
-        <div class="spinner-container">
-            <i class="fa-solid fa-circle-notch fa-spin spinner-icon" style="color:var(--brand-green); font-size: 2.5rem;"></i>
-            <h4 class="margin-top-md">Analyzing CIBIL PDF...</h4>
-            <p id="upload-status-desc" style="color:var(--brand-gold); font-weight:600;">Extracting data... (0s)</p>
-        </div>
-    `;
-
-    // Real-time animation timer
-    let seconds = 0;
-    const timerInterval = setInterval(() => {
-        seconds++;
-        const desc = document.getElementById("upload-status-desc");
-        if (desc) {
-            if (seconds < 10) desc.innerHTML = `Uploading securely... (${seconds}s)`;
-            else if (seconds < 35) desc.innerHTML = `Server is waking up (Free tier takes ~40s)... (${seconds}s)`;
-            else desc.innerHTML = `Almost done parsing document... (${seconds}s)`;
-        } else {
-            clearInterval(timerInterval);
-        }
-    }, 1000);
-
-    const formData = new FormData();
-    formData.append("file", fileObj);
-
-    try {
-        const response = await fetch(`${API_BASE_URL}/api/upload-cibil`, {
-            method: "POST",
-            body: formData,
-        });
-
-        clearInterval(timerInterval);
-
-        if (!response.ok) throw new Error(`Server returned ${response.status}`);
-
-        const data = await response.json();
-        console.log("✅ CIBIL Backend Response:", data);
-
-        // Restore drop zone with success indicator
-        placeholder.innerHTML = `
-            <i class="fa-regular fa-file-pdf text-red" style="font-size: 2.5rem; margin-bottom: 1rem;"></i>
-            <h4 style="color: var(--brand-green);">✅ Parsed: ${fileName}</h4>
-            <p class="text-secondary" style="font-size: 13px;">or click to upload a new PDF</p>
-            <div class="secure-badge margin-top-sm">Secure DPDP Parsing</div>
-        `;
-
-        if (data.error && !data.score) {
-            alert("⚠️ " + data.error);
-            return;
-        }
-
-        const score     = data.score || 0;
-        const summary   = data.summary || {};
-        const enquiries = summary.enquiries_90d || 0;
-        const hasOverdue = (summary.total_overdue || 0) > 0;
-        const accounts  = data.accounts || [];
-
-        // CC Utilization
-        let ccUtil = 0;
-        const ccAccounts = accounts.filter(a => a.AccountType && a.AccountType.toLowerCase().includes('credit card'));
-        if (ccAccounts.length > 0) {
-            const totalLimit = ccAccounts.reduce((s, a) => s + (a.CreditLimit || a.SanctionedAmount || 0), 0);
-            const totalBal   = ccAccounts.reduce((s, a) => s + (a.CurrentBalance || 0), 0);
-            if (totalLimit > 0) ccUtil = Math.round((totalBal / totalLimit) * 100);
-        }
-
-        // Auto-fill form fields with parsed values
-        document.getElementById("cibil-manual-score").value   = score;
-        document.getElementById("cibil-manual-enq").value     = enquiries;
-        document.getElementById("cibil-manual-overdue").value = hasOverdue ? "yes" : "no";
-        document.getElementById("cibil-manual-cc-util").value = ccUtil;
-
-        // Show analysis panel + table
-        analyzeCibilData(score, enquiries, hasOverdue ? "yes" : "no", ccUtil);
-        document.getElementById("cibil-parsed-results").style.display = "block";
-        populateCibilMegaTable(fileName, data);
-
-        // Clear pending file
-        window.pendingCibilFile = null;
-
-    } catch (err) {
-        clearInterval(timerInterval);
-        console.error("CIBIL upload error:", err);
-        placeholder.innerHTML = `
-            <i class="fa-regular fa-file-pdf text-red" style="font-size: 2.5rem; margin-bottom: 1rem;"></i>
-            <h4>Drag & Drop CIBIL PDF Report</h4>
-            <p class="text-secondary" style="font-size: 13px;">or click to select file from device</p>
-            <div class="secure-badge margin-top-sm">Secure DPDP Parsing</div>
-        `;
-        alert("⚠️ Backend server is starting up. Please wait 30 seconds and click 'Run CIBIL Assessment' again.");
-        window.pendingCibilFile = fileObj; // Keep file so user can retry
-    }
-}
-
-function analyzeCibilData(forcedScore, forcedEnq, forcedOverdue, forcedCcUtil) {
-    // If a PDF is pending (user uploaded PDF but hasn't sent it yet), send it now
-    if (window.pendingCibilFile && forcedScore === undefined) {
-        handleRealCibilUpload(window.pendingCibilFile);
-        return;
-    }
-
-    const score = forcedScore || parseInt(document.getElementById("cibil-manual-score").value) || 700;
-    const enquiries = forcedEnq !== undefined ? forcedEnq : parseInt(document.getElementById("cibil-manual-enq").value) || 0;
-    const overdue = forcedOverdue || document.getElementById("cibil-manual-overdue").value;
-    const ccUtil = forcedCcUtil !== undefined ? forcedCcUtil : parseInt(document.getElementById("cibil-manual-cc-util").value) || 0;
-
-    // Show results panel
-    document.getElementById("cibil-placeholder").classList.add("hidden");
-    document.getElementById("cibil-results-pane").classList.remove("hidden");
-
-    // Update UI elements
-    const scoreBadge = document.getElementById("cibil-score-badge");
-    scoreBadge.textContent = score;
-
-    const verdictBox = document.getElementById("cibil-verdict-box");
-    const verdictText = document.getElementById("cibil-verdict-text");
-
-    let status = "Excellent";
-    let borderClass = "border-green";
-    
-    if (score >= 750) {
-        status = "Excellent - Super Prime";
-        borderClass = "border-green";
-        verdictText.textContent = "Your credit history is strong. You will easily get the lowest ROI rates on balance transfer and fresh personal loans.";
-    } else if (score >= 700) {
-        status = "Good Credit Standing";
-        borderClass = "border-green";
-        verdictText.textContent = "Your credit rating is healthy. Lenders will approve standard loans, though some premium features might check employer categorizations.";
-    } else if (score >= 650) {
-        status = "Average Credit rating";
-        borderClass = "border-yellow";
-        verdictText.textContent = "You show moderate loan risk. Lenders may request bank statement proof or limit loan eligibility. Restructuring advice recommended.";
-    } else {
-        status = "Weak Credit Profile";
-        borderClass = "border-red";
-        verdictText.textContent = "High default risk flagged. Active overdues or delayed payments are impacting score. Traditional banks will reject directly. Debt consolidation structured via NBFC is best option.";
-    }
-
-    verdictBox.className = `cibil-verdict-box ${borderClass}`;
-    verdictBox.querySelector("strong").innerHTML = `<i class="fa-solid fa-circle-info"></i> Credit Score Verdict: ${status}`;
-
-    // Render flags
-    const flagsList = document.getElementById("cibil-flags-list");
-    flagsList.innerHTML = "";
-
-    const tipsList = document.getElementById("cibil-tips-list");
-    tipsList.innerHTML = "";
-
-    let hasFlags = false;
-
-    if (overdue === "yes") {
-        hasFlags = true;
-        flagsList.innerHTML += `<li class="flag-red"><i class="fa-solid fa-circle-exclamation"></i> <strong>Critical Default:</strong> Overdue amount or settled/written-off accounts found in report history.</li>`;
-        tipsList.innerHTML += `<li><i class="fa-solid fa-triangle-exclamation text-yellow"></i> <p>Request a <strong>NOC (No Objection Certificate)</strong> by paying the settlement outstanding amount immediately.</p></li>`;
-    }
-
-    if (ccUtil > 50) {
-        hasFlags = true;
-        flagsList.innerHTML += `<li class="flag-yellow"><i class="fa-solid fa-triangle-exclamation"></i> <strong>High Card Limit Utilization:</strong> Cards utilized at ${ccUtil}%. Ideal limit is under 30%.</li>`;
-        tipsList.innerHTML += `<li><i class="fa-solid fa-circle-arrow-up"></i> <p>Try to prepay card dues before the statement date to lower report utilization percentage.</p></li>`;
-    }
-
-    if (enquiries > 4) {
-        hasFlags = true;
-        flagsList.innerHTML += `<li class="flag-yellow"><i class="fa-solid fa-triangle-exclamation"></i> <strong>Hard Enquiries Overload:</strong> ${enquiries} inquiries found in last 90 days. Indicates credit hunger.</li>`;
-        tipsList.innerHTML += `<li><i class="fa-solid fa-calendar-minus"></i> <p>Avoid making multiple direct loan applications on portal sites. It triggers hard pulls and drops score.</p></li>`;
-    }
-
-    if (!hasFlags) {
-        flagsList.innerHTML = `<li class="text-green"><i class="fa-solid fa-check-circle"></i> Clean report. No negative flags found.</li>`;
-        tipsList.innerHTML = `<li><i class="fa-solid fa-arrow-trend-up"></i> <p>Continue maintaining current payment discipline.</p></li>`;
-    }
-
-    tipsList.innerHTML += `<li><i class="fa-solid fa-circle-check"></i> <p>Review active loan statements once a year to ensure zero reporting errors from banks.</p></li>`;
-    // Sync to Dashboard and apply theme
-    userProfile.cibil = score;
-    applyCibilTheme(score);
-    document.getElementById("home-cibil-val").textContent = score;
-    
-    const scorePct = Math.max(0, Math.min(100, ((score - 300) / 600) * 100));
-    const dashOffset = 126 - (126 * (scorePct / 100));
-    document.getElementById("cibil-dial-fill").style.strokeDashoffset = dashOffset;
-    document.getElementById("home-cibil-desc").innerHTML = `Your credit history is rated <strong>${status.split(" ")[0]}</strong>. Parser identified ${enquiries} recent inquiries.`;
-
-    // Also show the accounts table section (if not already visible from PDF upload)
-    const parsedResultsSection = document.getElementById("cibil-parsed-results");
-    if (parsedResultsSection) {
-        parsedResultsSection.style.display = "block";
-        // If table is still empty (no PDF uploaded), show a helpful guide row
-        const tbody = document.getElementById("cibil-mega-table-body");
-        if (tbody && tbody.innerHTML.trim() === "") {
-            const summaryGrid = document.getElementById("cibil-summary-grid");
-            if (summaryGrid && summaryGrid.innerHTML.trim() === "") {
-                summaryGrid.innerHTML = `
-                    <div class="form-group"><label>CIBIL Score (Manual)</label><div class="${score >= 750 ? 'text-green' : score >= 700 ? 'text-gold' : 'text-red'}" style="font-weight:700; font-size:1.3em;">${score}</div></div>
-                    <div class="form-group"><label>Enquiries (90 days)</label><div class="${enquiries > 3 ? 'text-red' : 'text-green'}">${enquiries}</div></div>
-                    <div class="form-group"><label>Overdue Status</label><div class="${overdue === 'yes' ? 'text-red' : 'text-green'}">${overdue === 'yes' ? '⚠ Active Overdue' : '✓ Clean'}</div></div>
-                    <div class="form-group"><label>CC Utilization</label><div class="${ccUtil > 50 ? 'text-red' : 'text-green'}">${ccUtil}%</div></div>
-                `;
-            }
-            tbody.innerHTML = `
-                <tr><td colspan="30" style="text-align:center; padding:40px; color: var(--text-secondary);">
-                    <i class="fa-solid fa-file-arrow-up text-gold" style="font-size:2rem; display:block; margin-bottom:12px;"></i>
-                    <strong>Upload your CIBIL PDF above</strong> to auto-extract all account rows into this table.<br>
-                    <small style="margin-top:8px; display:block;">Manual mode shows score analysis only. PDF upload extracts full account-wise data.</small>
-                </td></tr>
-            `;
-        }
-    }
-}
-
-function populateCibilMegaTable(fileName, data) {
-    const summary  = (data && data.summary)  || {};
-    const accounts = (data && data.accounts) || [];
-    const score    = data && data.score;
-    const today    = new Date().toLocaleDateString('en-IN');
-
-    // 1. Fill Summary Dashboard with REAL data
-    const summaryGrid = document.getElementById("cibil-summary-grid");
-    if (summaryGrid) {
-        const scoreColor = score >= 750 ? 'text-green' : score >= 700 ? 'text-gold' : 'text-red';
-        summaryGrid.innerHTML = `
-            <div class="form-group"><label>Report Parsed On</label><div class="text-gold" style="font-weight:600;">${today}</div></div>
-            <div class="form-group"><label>CIBIL Pulled Date</label><div class="text-mint" style="font-weight:600;">${summary.report_date || 'Not Found'}</div></div>
-            <div class="form-group"><label>CIBIL Score</label><div class="${scoreColor}" style="font-weight:700; font-size:1.3em;">${score || 'Not Found'}</div></div>
-            <div class="form-group"><label>Name</label><div style="font-weight:600;">${summary.name || 'Not Found'}</div></div>
-            <div class="form-group"><label>PAN Card No</label><div>${summary.pan || 'Not Found'}</div></div>
-            <div class="form-group"><label>Date of Birth</label><div>${summary.dob || 'Not Found'}</div></div>
-            <div class="form-group"><label>Mobile</label><div>${summary.mobile || 'Not Found'}</div></div>
-            <div class="form-group"><label>Total Accounts</label><div>${summary.total_accounts || accounts.length}</div></div>
-            <div class="form-group"><label>Active Accounts</label><div>${summary.active_accounts || '-'}</div></div>
-            <div class="form-group"><label>Total Outstanding</label><div class="text-gold" style="font-weight:600;">₹${(summary.total_outstanding || 0).toLocaleString('en-IN')}</div></div>
-            <div class="form-group"><label>Total Overdue</label><div class="${(summary.total_overdue || 0) > 0 ? 'text-red' : 'text-green'}" style="font-weight:600;">₹${(summary.total_overdue || 0).toLocaleString('en-IN')}</div></div>
-            <div class="form-group"><label>Enquiries (90 days)</label><div class="${(summary.enquiries_90d || 0) > 3 ? 'text-red' : 'text-green'}">${summary.enquiries_90d || 0} Enquiries</div></div>
-            <div class="form-group"><label>Source File</label><div style="font-size:12px; word-break:break-all;">${fileName}</div></div>
-        `;
-    }
-
-    // 2. Fill Enquiries Table
-    const inqTbody = document.getElementById("cibil-inquiries-table-body");
-    const recentEnquiries = summary.recent_enquiries || [];
-    if (inqTbody) {
-        if (recentEnquiries.length === 0) {
-            inqTbody.innerHTML = `<tr><td colspan="2" style="text-align:center; padding:15px; color:var(--text-secondary);">No recent inquiries found.</td></tr>`;
-        } else {
-            inqTbody.innerHTML = recentEnquiries.map(eq => `
-                <tr style="border-bottom: 1px solid rgba(255,255,255,0.05);">
-                    <td style="padding:10px;">${eq.Date}</td>
-                    <td style="padding:10px; font-weight:600;">${eq.Institution}</td>
-                </tr>
-            `).join('');
-        }
-    }
-
-    // 3. Fill Active & All Tables
-    const activeTbody = document.getElementById("cibil-active-table-body");
-    const allTbody = document.getElementById("cibil-all-table-body");
-    if (!activeTbody || !allTbody) return;
-
-    if (accounts.length === 0) {
-        activeTbody.innerHTML = `<tr><td colspan="15" style="text-align:center; padding:30px; color:var(--text-secondary);">No active accounts found.</td></tr>`;
-        allTbody.innerHTML = `<tr><td colspan="15" style="text-align:center; padding:30px; color:var(--text-secondary);">No accounts found.</td></tr>`;
-        return;
-    }
-
-    const fmt = (n) => n > 0 ? '₹' + Number(n).toLocaleString('en-IN') : '-';
-    
-    // Helper to format DPD (Payment History)
-    const formatDPD = (historyStr) => {
-        if (!historyStr || historyStr === "-") return "-";
-        const blocks = historyStr.split(' ');
-        return blocks.map(b => {
-            // Check if it's a number > 000
-            const isLate = /^[0-9]{3}$/.test(b) && b !== "000";
-            if (isLate) return `<span style="background:rgba(255,0,0,0.25); color:#ff6b6b; padding:2px 4px; border-radius:3px; margin:1px; display:inline-block; font-size:11px;">${b}</span>`;
-            return `<span style="color:var(--text-secondary); margin:1px; display:inline-block; font-size:11px;">${b}</span>`;
-        }).join('');
-    };
-
-    let activeHTML = "";
-    let allHTML = "";
-
-    accounts.forEach(a => {
-        const isClosed   = (a.PaymentStatus || '').toLowerCase().includes('closed');
-        const isNPA      = ['sub-standard','doubtful','loss','written off','settled', 'settlement'].some(s => (a.PaymentStatus || '').toLowerCase().includes(s));
-        
-        let rowStyle = "border-bottom: 1px solid rgba(255,255,255,0.05);";
-        if (isNPA) {
-            rowStyle += " background: rgba(139, 0, 0, 0.4) !important; color: #ffe5e5;";
-        }
-        
-        const statusClass = isClosed ? 'text-charcoal' : isNPA ? 'text-red' : 'text-green';
-        
-        const rowHTMLActive = `
-        <tr style="${rowStyle}">
-            <td style="padding:10px; font-weight:600;">${a.BankName || '-'}</td>
-            <td style="padding:10px;">${a.AccountType || '-'}</td>
-            <td style="padding:10px; font-family:monospace;">${a.AccountNumber || '-'}</td>
-            <td style="padding:10px;">${a.Ownership || 'Individual'}</td>
-            <td style="padding:10px;">${fmt(a.CreditLimit)}</td>
-            <td style="padding:10px;">${fmt(a.SanctionedAmount)}</td>
-            <td style="padding:10px;">${fmt(a.HighCredit)}</td>
-            <td style="padding:10px; font-weight:bold;">${fmt(a.CurrentBalance)}</td>
-            <td style="padding:10px; color:${a.AmountOverdue > 0 ? 'var(--red)' : 'inherit'}; font-weight:${a.AmountOverdue > 0 ? '700' : 'normal'}">${fmt(a.AmountOverdue)}</td>
-            <td style="padding:10px;">${fmt(a.EMI)}</td>
-            <td style="padding:10px;">${a.DateOpened || '-'}</td>
-            <td style="padding:10px;"><span class="badge ${statusClass}" style="${isNPA ? 'background:rgba(255,0,0,0.3); border-color:rgba(255,0,0,0.5);' : ''}">${a.PaymentStatus || '-'}</span></td>
-            <td style="padding:10px; max-width:250px; line-height:1.4;">${formatDPD(a.PaymentHistory)}</td>
-        </tr>`;
-
-        const rowHTMLAll = `
-        <tr style="${rowStyle}">
-            <td style="padding:10px; font-weight:600;">${a.BankName || '-'}</td>
-            <td style="padding:10px;">${a.AccountType || '-'}</td>
-            <td style="padding:10px; font-family:monospace;">${a.AccountNumber || '-'}</td>
-            <td style="padding:10px;">${a.Ownership || 'Individual'}</td>
-            <td style="padding:10px;">${fmt(a.CreditLimit)}</td>
-            <td style="padding:10px;">${fmt(a.SanctionedAmount)}</td>
-            <td style="padding:10px;">${fmt(a.HighCredit)}</td>
-            <td style="padding:10px; font-weight:bold;">${fmt(a.CurrentBalance)}</td>
-            <td style="padding:10px; color:${a.AmountOverdue > 0 ? 'var(--red)' : 'inherit'}; font-weight:${a.AmountOverdue > 0 ? '700' : 'normal'}">${fmt(a.AmountOverdue)}</td>
-            <td style="padding:10px;">${fmt(a.EMI)}</td>
-            <td style="padding:10px;">${a.DateOpened || '-'}</td>
-            <td style="padding:10px;">${a.DateClosed || '-'}</td>
-            <td style="padding:10px;"><span class="badge ${statusClass}" style="${isNPA ? 'background:rgba(255,0,0,0.3); border-color:rgba(255,0,0,0.5);' : ''}">${a.PaymentStatus || '-'}</span></td>
-            <td style="padding:10px; max-width:250px; line-height:1.4;">${formatDPD(a.PaymentHistory)}</td>
-        </tr>`;
-
-        if (!isClosed) activeHTML += rowHTMLActive;
-        allHTML += rowHTMLAll;
-    });
-
-    activeTbody.innerHTML = activeHTML || `<tr><td colspan="15" style="text-align:center; padding:30px; color:var(--text-secondary);">No active accounts.</td></tr>`;
-    allTbody.innerHTML = allHTML || `<tr><td colspan="15" style="text-align:center; padding:30px; color:var(--text-secondary);">No accounts found.</td></tr>`;
-}
-
-function exportCibilToExcel(type) {
-    if (!window.XLSX) {
-        alert("Export module not loaded. Please wait.");
-        return;
-    }
-    
-    // Default to active if type not provided
-    type = type || 'active';
-    const tableId = type === 'active' ? "cibil-active-table" : "cibil-all-table";
-    let table = document.getElementById(tableId);
-    if (!table) return;
-
-    // Use SheetJS table_to_book helper
-    let wb = XLSX.utils.table_to_book(table, {sheet: type === 'active' ? "Live Accounts" : "All Accounts"});
-    XLSX.writeFile(wb, `Moneyed_CIBIL_${type}_Accounts.xlsx`);
-}
-
 // 5. WALNUT-STYLE EXPENSE TRACKER
 window.expenseTransactions = [];
 
@@ -1486,13 +568,16 @@ function autoCategorizeExpense() {
     
     const text = noteEl.value.toLowerCase();
     const wantsKeywords = ['zomato', 'swiggy', 'netflix', 'amazon', 'movie', 'game', 'party', 'dinner', 'shopping', 'myntra', 'flipkart'];
-    const needsKeywords = ['uber', 'ola', 'petrol', 'fuel', 'rent', 'electricity', 'water', 'bill', 'grocery', 'blinkit', 'milk'];
+    const needsKeywords = ['uber', 'ola', 'petrol', 'fuel', 'rent', 'electricity', 'water', 'bill', 'grocery', 'blinkit', 'milk', 'hospital', 'medicine'];
+    const savingsKeywords = ['sip', 'stock', 'mutual fund', 'zerodha', 'groww', 'pf', 'ppf'];
     
     let isWant = wantsKeywords.some(kw => text.includes(kw));
     let isNeed = needsKeywords.some(kw => text.includes(kw));
+    let isSaving = savingsKeywords.some(kw => text.includes(kw));
     
-    if (isWant) catEl.value = 'wants';
-    else if (isNeed) catEl.value = 'needs';
+    if (isWant) catEl.value = 'wants-food';
+    else if (isNeed) catEl.value = 'needs-utilities';
+    else if (isSaving) catEl.value = 'savings-invest';
 }
 
 function addExpenseTransaction() {
@@ -1539,8 +624,12 @@ function updateExpenseDashboard() {
 
     window.expenseTransactions.forEach(tx => {
         totalSpent += tx.amount;
-        if (sums[tx.category] !== undefined) {
-            sums[tx.category] += tx.amount;
+        let baseCat = tx.category;
+        if (tx.category.includes('-')) {
+            baseCat = tx.category.split('-')[0];
+        }
+        if (sums[baseCat] !== undefined) {
+            sums[baseCat] += tx.amount;
         }
     });
 
@@ -1573,7 +662,10 @@ function updateExpenseDashboard() {
     const filterVal = document.getElementById("exp-filter") ? document.getElementById("exp-filter").value : 'all';
     let filteredTxs = window.expenseTransactions;
     if (filterVal !== 'all') {
-        filteredTxs = window.expenseTransactions.filter(tx => tx.category === filterVal);
+        filteredTxs = window.expenseTransactions.filter(tx => {
+            let baseCat = tx.category.includes('-') ? tx.category.split('-')[0] : tx.category;
+            return baseCat === filterVal || tx.category === filterVal;
+        });
     }
 
     // Update List
@@ -1587,21 +679,23 @@ function updateExpenseDashboard() {
         `;
     } else {
         listContainer.innerHTML = filteredTxs.map(tx => {
-            let catName = tx.category.charAt(0).toUpperCase() + tx.category.slice(1);
+            let baseCat = tx.category.includes('-') ? tx.category.split('-')[0] : tx.category;
+            let subCatName = tx.category.split('-').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
+            
             let icon = 'fa-wallet';
-            if (tx.category === 'needs') icon = 'fa-bolt';
-            if (tx.category === 'wants') icon = 'fa-gift';
-            if (tx.category === 'savings') icon = 'fa-piggy-bank';
+            if (baseCat === 'needs') icon = 'fa-bolt';
+            if (baseCat === 'wants') icon = 'fa-gift';
+            if (baseCat === 'savings') icon = 'fa-piggy-bank';
             
             return `
                 <div class="transaction-item">
                     <div class="tx-left">
-                        <div class="tx-icon ${tx.category}">
+                        <div class="tx-icon ${baseCat}">
                             <i class="fa-solid ${icon}"></i>
                         </div>
                         <div class="tx-details">
-                            <strong>${tx.note || catName}</strong>
-                            <span>${new Date(tx.date).toLocaleDateString('en-IN', {day:'numeric', month:'short'})} • ${catName}</span>
+                            <strong>${tx.note || subCatName}</strong>
+                            <span>${new Date(tx.date).toLocaleDateString('en-IN', {day:'numeric', month:'short'})} • ${subCatName}</span>
                         </div>
                     </div>
                     <div class="tx-right text-red">
@@ -1614,6 +708,9 @@ function updateExpenseDashboard() {
 
     // Budget Progress Bars
     updateBudgetProgressBars(budget, sums);
+    
+    // Gamification Badge
+    updateGamificationBadge(budget, sums);
 
     // Chart.js Analytics
     renderExpenseChart(sums);
@@ -1655,6 +752,157 @@ function updateBudgetProgressBars(budget, sums) {
         }
     });
 }
+
+function updateGamificationBadge(budget, sums) {
+    const rules = { needs: 0.5, wants: 0.3, savings: 0.2 };
+    const needsBudget = budget * rules.needs;
+    const wantsBudget = budget * rules.wants;
+    const savingsBudget = budget * rules.savings;
+    
+    const needsSpent = sums.needs || 0;
+    const wantsSpent = sums.wants || 0;
+    const savingsSpent = sums.savings || 0;
+    
+    const needsPct = needsBudget > 0 ? (needsSpent / needsBudget) * 100 : 0;
+    const wantsPct = wantsBudget > 0 ? (wantsSpent / wantsBudget) * 100 : 0;
+    const savingsPct = savingsBudget > 0 ? (savingsSpent / savingsBudget) * 100 : 0;
+    
+    let tier = "Apprentice";
+    let icon = "fa-medal";
+    let color = "#F3A712"; // Gold/Yellow for Apprentice
+    let desc = "Keep Needs < 50% & Wants < 30% to level up!";
+    
+    // Logic for Financial Ninja
+    if (wantsPct <= 100 && needsPct <= 100 && savingsPct >= 100 && budget > 0) {
+        tier = "Financial Ninja 🥷";
+        icon = "fa-star-ninja"; // Custom or generic star
+        color = "var(--neon-green)";
+        desc = "Perfect 50/30/20 balance! You are mastering your wealth.";
+    } else if (wantsPct <= 100 && needsPct <= 100 && budget > 0) {
+        tier = "Disciplined Saver";
+        icon = "fa-shield-halved";
+        color = "var(--brand-green)";
+        desc = "Great job keeping expenses within limits. Now boost savings!";
+    } else if (wantsPct > 100) {
+        tier = "Spender Alert";
+        icon = "fa-triangle-exclamation";
+        color = "#e74c3c";
+        desc = "Wants are over budget! Control impulse spending.";
+    }
+    
+    const badgeIconEl = document.getElementById("gamification-badge-icon");
+    const badgeTextEl = document.getElementById("gamification-badge-text");
+    const badgeDescEl = document.getElementById("gamification-badge-desc");
+    
+    if (badgeIconEl && badgeTextEl && badgeDescEl) {
+        badgeIconEl.style.background = color;
+        badgeIconEl.style.boxShadow = `0 4px 15px ${color}80`;
+        badgeIconEl.innerHTML = `<i class="fa-solid ${icon === 'fa-star-ninja' ? 'fa-star' : icon}"></i>`;
+        
+        badgeTextEl.style.color = color;
+        badgeTextEl.textContent = tier;
+        
+        badgeDescEl.textContent = desc;
+    }
+}
+
+// AI WhatsApp-style Expense Assistant
+window.handleExpenseChat = function(e) {
+    if (e.key === 'Enter') {
+        sendExpenseChat();
+    }
+};
+
+window.sendExpenseChat = function() {
+    const inputEl = document.getElementById("ai-expense-input");
+    const text = inputEl.value.trim();
+    if (!text) return;
+    
+    const chatArea = document.getElementById("expense-chat-area");
+    
+    // Add User Message
+    const userMsg = document.createElement("div");
+    userMsg.className = "chat-msg user-msg";
+    userMsg.style = "align-self: flex-end; background: var(--brand-green); color: white; padding: 10px 14px; border-radius: 12px 12px 0 12px; box-shadow: 0 1px 2px rgba(0,0,0,0.05); max-width: 85%;";
+    userMsg.innerHTML = `
+        <p style="margin: 0; font-size: 13px;">${text}</p>
+        <span style="font-size: 10px; color: rgba(255,255,255,0.7); display: block; text-align: right; margin-top: 4px;">Just now</span>
+    `;
+    chatArea.appendChild(userMsg);
+    inputEl.value = "";
+    chatArea.scrollTop = chatArea.scrollHeight;
+    
+    // Simple NLP Processing
+    setTimeout(() => {
+        let amount = 0;
+        let category = "wants-other";
+        let note = text;
+        
+        // Extract Amount (find number)
+        const numMatch = text.match(/\d+/);
+        if (numMatch) {
+            amount = parseInt(numMatch[0]);
+        }
+        
+        // Infer Category
+        const textLower = text.toLowerCase();
+        if (textLower.includes("rent") || textLower.includes("emi") || textLower.includes("electricity") || textLower.includes("bill")) {
+            category = "needs-utilities";
+        } else if (textLower.includes("swiggy") || textLower.includes("zomato") || textLower.includes("coffee") || textLower.includes("food") || textLower.includes("lunch")) {
+            category = "wants-food";
+        } else if (textLower.includes("sip") || textLower.includes("mutual fund") || textLower.includes("stock") || textLower.includes("invest")) {
+            category = "savings-invest";
+        } else if (textLower.includes("grocery") || textLower.includes("milk") || textLower.includes("veg")) {
+            category = "needs-groceries";
+        } else if (textLower.includes("movie") || textLower.includes("netflix") || textLower.includes("party")) {
+            category = "wants-entertainment";
+        } else if (textLower.includes("fuel") || textLower.includes("petrol") || textLower.includes("cab") || textLower.includes("uber") || textLower.includes("ola")) {
+            category = "wants-travel";
+        }
+        
+        let responseHTML = "";
+        
+        if (amount > 0) {
+            // Add to system
+            const newTx = {
+                id: 'tx-' + Date.now(),
+                amount: amount,
+                category: category,
+                note: note,
+                date: new Date().toISOString().split('T')[0]
+            };
+            window.expenseTransactions.unshift(newTx);
+            updateExpenseDashboard();
+            
+            let baseCat = category.split('-')[0];
+            let catName = baseCat.charAt(0).toUpperCase() + baseCat.slice(1);
+            
+            // Send to Unified CRM
+            window.syncToCRM("Expense Entry", {
+                amount: amount,
+                category: catName,
+                note: note,
+                details: `User added expense: ₹${amount} in ${catName}. Note: ${note}`
+            });
+            
+            responseHTML = `✅ Added ₹${amount.toLocaleString('en-IN')} to <strong>${catName}</strong>. Dashboard updated!`;
+        } else {
+            responseHTML = `I couldn't detect an amount in your message. Please include a number, like "Spent 200 on coffee".`;
+        }
+        
+        // Add Bot Message
+        const botMsg = document.createElement("div");
+        botMsg.className = "chat-msg bot-msg";
+        botMsg.style = "align-self: flex-start; background: var(--bg-glass); padding: 10px 14px; border-radius: 0 12px 12px 12px; box-shadow: 0 1px 2px rgba(0,0,0,0.05); max-width: 85%; border: 1px solid var(--border-glass);";
+        botMsg.innerHTML = `
+            <p style="margin: 0; font-size: 13px; color: var(--text-color);">${responseHTML}</p>
+            <span style="font-size: 10px; color: var(--text-muted); display: block; text-align: right; margin-top: 4px;">Just now</span>
+        `;
+        chatArea.appendChild(botMsg);
+        chatArea.scrollTop = chatArea.scrollHeight;
+        
+    }, 600); // Small delay to feel like AI is thinking
+};
 
 function renderExpenseChart(sums) {
     const ctx = document.getElementById('expenseChart');
@@ -1739,6 +987,87 @@ function exportExpenses() {
     XLSX.writeFile(wb, `Moneyed_Expense_Report.xlsx`);
 }
 
+// New V2 Features
+function mockSmsSync() {
+    const btn = document.getElementById("btn-sync-sms");
+    const originalText = btn.innerHTML;
+    btn.innerHTML = `<i class="fa-solid fa-rotate sync-animation"></i> Syncing SMS...`;
+    btn.disabled = true;
+
+    setTimeout(() => {
+        const mockTxs = [
+            { id: Date.now()+1, amount: 450, category: 'wants-food', note: 'Zomato Payment', date: new Date().toISOString().split('T')[0] },
+            { id: Date.now()+2, amount: 2400, category: 'needs-utilities', note: 'Electricity Bill', date: new Date().toISOString().split('T')[0] }
+        ];
+        window.expenseTransactions = [...mockTxs, ...window.expenseTransactions];
+        updateExpenseDashboard();
+        
+        btn.innerHTML = originalText;
+        btn.disabled = false;
+        
+        // Show a temporary inline toast instead of annoying alert
+        let toast = document.createElement("div");
+        toast.className = "toast-message";
+        toast.style = "position:fixed; bottom:20px; right:20px; background:var(--brand-green); color:#fff; padding:12px 20px; border-radius:8px; box-shadow:0 4px 12px rgba(0,0,0,0.2); z-index:9999; animation:fadeIn 0.3s ease;";
+        toast.innerHTML = "<i class='fa-solid fa-check-circle'></i> Found and synced 2 new transactions!";
+        document.body.appendChild(toast);
+        setTimeout(() => toast.remove(), 3000);
+    }, 2000);
+}
+window.addExpenseFromModal = function() {
+    let name = document.getElementById('new-expense-name').value;
+    let amount = document.getElementById('new-expense-amount').value;
+    
+    if (!name || !amount || isNaN(amount)) {
+        alert("Please enter a valid name and amount.");
+        return;
+    }
+    
+    // Add to local dummy data array
+    expenseData.subscriptions.push({ name: name, amount: parseFloat(amount), due: "Just Added" });
+    
+    // UI Update (Add to top of list visually)
+    const list = document.getElementById("subscription-list");
+    const letter = name.charAt(0).toUpperCase();
+    const colors = ['#E50914', '#1AA463', '#0070BA', '#F3A712', '#4285F4'];
+    const randomColor = colors[Math.floor(Math.random() * colors.length)];
+    
+    const div = document.createElement("div");
+    div.style = "display:flex; justify-content:space-between; align-items:center; padding: 12px; background: var(--bg-color); border: 1px solid var(--border-color); border-radius: 8px; margin-bottom: 8px;";
+    div.innerHTML = `
+        <div style="display:flex; gap: 12px; align-items: center;">
+            <div style="width: 35px; height: 35px; border-radius: 8px; background: ${randomColor}; color: white; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 16px;">${letter}</div>
+            <div>
+                <p style="margin:0; font-weight: 600; font-size: 13px;">${name}</p>
+                <p style="margin:0; font-size: 11px; color: var(--text-secondary);"><i class="fa-solid fa-clock"></i> Just Added</p>
+            </div>
+        </div>
+        <strong style="color: var(--text-color); font-size: 14px;"><i class="fa-solid fa-indian-rupee-sign" style="font-size:0.9em;"></i> ${parseFloat(amount).toLocaleString('en-IN')}</strong>
+    `;
+    list.prepend(div);
+    
+    // Cleanup & Sync
+    document.getElementById('new-expense-name').value = '';
+    document.getElementById('new-expense-amount').value = '';
+    document.getElementById('expense-add-modal').style.display = 'none';
+    
+    if (window.debouncedSyncToCRM) {
+        window.debouncedSyncToCRM("Expense Entry", { details: `Added ${name} for ₹${amount}` });
+    }
+}
+
+
+function openSplitBillModal() {
+    document.getElementById("split-bill-modal").classList.add('active');
+}
+function closeSplitBillModal() {
+    document.getElementById("split-bill-modal").classList.remove('active');
+}
+function confirmSplitBill() {
+    closeSplitBillModal();
+    alert("Split requests sent successfully to Neha, Rahul, and Rohan!");
+}
+
 // 6. AI FINANCIAL COACH LOGIC
 window.aiCoachData = null;
 
@@ -1759,7 +1088,6 @@ async function loadCoachData() {
             hindi: [...(data1.hindi||[]), ...(data2.hindi||[])]
         };
 
-        console.log("AI Coach Data Loaded", window.aiCoachData);
         // Automatically populate greeting and dynamic chips once data is loaded
         setTimeout(updateCoachGreeting, 100);
     } catch (e) {
@@ -1775,7 +1103,7 @@ function updateCoachGreeting() {
     if(!msgContainer) return;
     
     // Universal greeting acknowledging multi-lingual support
-    let greeting = "Namaste! I am the Moneyed AI Coach, backed by the financial expertise of Founder Nakul Verma and Co-Founder Priyanka Verma. Ask me any personal finance or loan queries in English, Hindi, or Hinglish!";
+    let greeting = "Namaste! I am the Moneyed AI Coach, backed by our expert financial team. Ask me any personal finance or loan queries in English, Hindi, or Hinglish!";
     
     // Reset chat
     msgContainer.innerHTML = `
@@ -1936,6 +1264,52 @@ function simulateCoachReply(userMsg) {
     }, 800 + Math.random() * 500); // realistic delay
 }
 
+// --- Voice Search (Speech Recognition) ---
+window.startVoiceRecognition = function() {
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!SpeechRecognition) {
+        alert("Sorry, your browser doesn't support Voice Search. Please use Chrome or Edge.");
+        return;
+    }
+
+    const recognition = new SpeechRecognition();
+    recognition.lang = 'en-IN'; // Works for Hinglish/English/Hindi
+    recognition.interimResults = false;
+    recognition.maxAlternatives = 1;
+
+    const micIcon = document.getElementById("mic-icon");
+    const inputField = document.getElementById("chat-user-input");
+
+    recognition.onstart = function() {
+        if(micIcon) {
+            micIcon.classList.remove("fa-microphone");
+            micIcon.classList.add("fa-spinner", "fa-spin");
+            micIcon.style.color = "var(--brand-green)";
+        }
+        inputField.placeholder = "Listening... Speak now";
+    };
+
+    recognition.onresult = function(event) {
+        const transcript = event.results[0][0].transcript;
+        inputField.value = transcript;
+        sendChatMessage();
+    };
+
+    recognition.onerror = function(event) {
+        console.error("Voice recognition error: ", event.error);
+    };
+
+    recognition.onend = function() {
+        if(micIcon) {
+            micIcon.classList.remove("fa-spinner", "fa-spin");
+            micIcon.classList.add("fa-microphone");
+            micIcon.style.color = "";
+        }
+        inputField.placeholder = "Type your personal finance or loan query...";
+    };
+
+    recognition.start();
+};
 // 7. CONSULTATION SCHEDULER LOGIC
 let selectedBookingDate = "";
 let selectedBookingSlot = "";
@@ -1995,13 +1369,14 @@ function submitBooking() {
     const topic = document.getElementById("book-topic").value;
     const name = document.getElementById("book-name").value;
     const phone = document.getElementById("book-phone").value;
+    const email = document.getElementById("book-email").value;
 
     if (!selectedBookingDate || !selectedBookingSlot) {
         alert("Please select both advisory date and available time slot.");
         return;
     }
-    if (!name || !phone) {
-        alert("Please provide contact details to reserve phone slot.");
+    if (!name || !phone || !email) {
+        alert("Please provide Name, Mobile, and Email to reserve your slot.");
         return;
     }
 
@@ -2010,6 +1385,7 @@ function submitBooking() {
         id: `L-${Math.floor(1000 + Math.random() * 9000)}`,
         name: name,
         phone: phone,
+        email: email,
         city: "Not Provided",
         empType: "N/A",
         income: 0,
@@ -2026,14 +1402,75 @@ function submitBooking() {
         history: [{ date: new Date().toISOString().split('T')[0], text: `Scheduled consultation slot: ${selectedBookingDate} - ${selectedBookingSlot}` }]
     };
 
+    // Send to unified CRM
+    window.syncToCRM("Consultations", {
+        name: name,
+        phone: phone,
+        email: email,
+        topic: topic,
+        date: selectedBookingDate,
+        slot: selectedBookingSlot,
+        details: `Requested consultation focus area: ${topic}. Call Slot Reserved: ${selectedBookingDate} at ${selectedBookingSlot}.`
+    });
+
     leads.unshift(newBookingLead);
     localStorage.setItem("moneyed_leads", JSON.stringify(leads));
 
-    alert(`Consultation Scheduled! Nakul Verma's team will call you on ${selectedBookingDate} during the slot: ${selectedBookingSlot}. Confirmation SMS sent to ${phone}.`);
+    // Hide form, show success
+    document.querySelector(".booking-steps-container").style.display = "none";
+    document.getElementById("booking-success-msg").style.display = "block";
+    document.getElementById("booking-success-details").innerText = `Our advisory team will call you on ${selectedBookingDate} during the slot: ${selectedBookingSlot}. Confirmation SMS and Email will be sent to you.`;
+
+    // Generate Google Calendar Link
+    // Parse "Tomorrow" or "Wed, Jun 4" to a valid Date object
+    let d = new Date();
+    if (selectedBookingDate.toLowerCase() === "tomorrow") {
+        d.setDate(d.getDate() + 1);
+    } else if (selectedBookingDate.toLowerCase() !== "today") {
+        // Simple heuristic: "Wed, Jun 4"
+        const parts = selectedBookingDate.split(',');
+        if (parts.length > 1) {
+            const dateStr = parts[1].trim() + " " + d.getFullYear();
+            const parsed = new Date(dateStr);
+            if (!isNaN(parsed)) d = parsed;
+        }
+    }
     
+    // Parse time slot "10:30 AM - 11:00 AM"
+    let startTimeStr = selectedBookingSlot.split('-')[0].trim();
+    let [time, modifier] = startTimeStr.split(' ');
+    let [hours, minutes] = time.split(':');
+    if (hours === '12') hours = '00';
+    if (modifier === 'PM') hours = parseInt(hours, 10) + 12;
+    d.setHours(hours, minutes, 0, 0);
+
+    let endD = new Date(d.getTime() + 30*60000); // 30 min duration
+
+    // Format to YYYYMMDDTHHmmssZ (UTC)
+    const formatCalDate = (dateObj) => dateObj.toISOString().replace(/-|:|\.\d\d\d/g, "");
+
+    let startDs = formatCalDate(d);
+    let endDs = formatCalDate(endD);
+    
+    let title = encodeURIComponent("Moneyed Loan Advisory Call: " + name);
+    let details = encodeURIComponent("Consultation Topic: " + topic + "\n\nPlease ensure you are available for a call from our expert team.");
+    let gCalUrl = `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${title}&dates=${startDs}/${endDs}&details=${details}`;
+    
+    document.getElementById("add-to-calendar-btn").href = gCalUrl;
+
+    // Generate WhatsApp Link
+    let waMsg = encodeURIComponent(`Hi Moneyed Team,\n\nI have just booked a consultation session.\n*Name:* ${name}\n*Date:* ${selectedBookingDate}\n*Time:* ${selectedBookingSlot}\n*Topic:* ${topic}\n\nPlease confirm my appointment.`);
+    document.getElementById("wa-notify-btn").href = `https://wa.me/916269000066?text=${waMsg}`;
+
+    // Auto-open calendar link
+    setTimeout(() => {
+        window.open(gCalUrl, '_blank');
+    }, 500);
+
     // Clean fields
     document.getElementById("book-name").value = "";
     document.getElementById("book-phone").value = "";
+    document.getElementById("book-email").value = "";
     document.querySelectorAll(".date-btn, .slot-btn").forEach(b => b.classList.remove("active"));
     selectedBookingDate = "";
     selectedBookingSlot = "";
@@ -2041,6 +1478,11 @@ function submitBooking() {
     // Sync CRM
     updateCrmStats();
     renderCrmTable();
+}
+
+function resetBookingForm() {
+    document.getElementById("booking-success-msg").style.display = "none";
+    document.querySelector(".booking-steps-container").style.display = "block";
 }
 
 // 8. ADMIN CRM LOGIC
@@ -2233,15 +1675,6 @@ function closeLeadModal() {
     document.getElementById("lead-modal").classList.add("hidden");
 }
 
-function clearAllLeads() {
-    if (confirm("Are you sure you want to restore initial mock leads database? This deletes custom items.")) {
-        localStorage.removeItem("moneyed_leads");
-        // Clear theme class on reset
-        document.body.className = "";
-        initApp();
-        alert("Database reset completed.");
-    }
-}
 
 // Dynamic Theme Application based on CIBIL score
 function applyCibilTheme(score) {
@@ -2293,16 +1726,16 @@ function generateEmiSchedule(principal, monthlyRate, totalMonths, emi) {
     let schedule = [];
     
     for (let m = 1; m <= totalMonths; m++) {
-        let interest = balance * monthlyRate;
-        let principalPaid = emi - interest;
+        let interest = Number((balance * monthlyRate).toFixed(2));
+        let principalPaid = Number((emi - interest).toFixed(2));
         
         // Handle last month rounding
         if (m === totalMonths || balance - principalPaid < 0) {
-            principalPaid = balance;
-            emi = principalPaid + interest;
+            principalPaid = Number(balance.toFixed(2));
+            emi = Number((principalPaid + interest).toFixed(2));
         }
         
-        let closing = balance - principalPaid;
+        let closing = Number((balance - principalPaid).toFixed(2));
         if (closing < 0) closing = 0;
         
         schedule.push({
@@ -2313,6 +1746,9 @@ function generateEmiSchedule(principal, monthlyRate, totalMonths, emi) {
             Principal: principalPaid,
             Closing: closing
         });
+        
+        // Update balance for next iteration
+        balance = closing;
         
         let tr = document.createElement("tr");
         tr.innerHTML = `
@@ -2401,21 +1837,31 @@ function exportSchedule(type, format) {
     }
 }
 // 8. THEME & LOGO MANAGEMENT
+function updateLogoForTheme(isDark) {
+    const logoSrc = isDark ? 'moneyed-logo-dark.svg' : 'moneyed-logo-light.svg';
+    ['sidebar-logo', 'mobile-logo'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.src = logoSrc;
+    });
+}
+
 function initTheme() {
     const savedTheme = localStorage.getItem('moneyed_theme');
     if (savedTheme === 'dark') {
         document.body.classList.add('theme-dark');
         document.getElementById('theme-toggle-btn').innerHTML = '<i class="fa-solid fa-sun"></i>';
+        updateLogoForTheme(true);
     } else {
         document.body.classList.remove('theme-dark');
         document.getElementById('theme-toggle-btn').innerHTML = '<i class="fa-solid fa-moon"></i>';
+        updateLogoForTheme(false);
     }
 }
 
 function toggleTheme() {
     document.body.classList.toggle('theme-dark');
     const isDark = document.body.classList.contains('theme-dark');
-    
+
     if (isDark) {
         localStorage.setItem('moneyed_theme', 'dark');
         document.getElementById('theme-toggle-btn').innerHTML = '<i class="fa-solid fa-sun"></i>';
@@ -2423,91 +1869,757 @@ function toggleTheme() {
         localStorage.setItem('moneyed_theme', 'light');
         document.getElementById('theme-toggle-btn').innerHTML = '<i class="fa-solid fa-moon"></i>';
     }
+    updateLogoForTheme(isDark);
 }
 
 
 
-// 9. GOOGLE AUTH & UI UPDATES
-function openLoginModal() {
-    document.getElementById('login-modal').style.display = 'flex';
+// =========================================
+// PREMIUM ANIMATIONS & MICRO-INTERACTIONS
+// =========================================
+document.addEventListener("DOMContentLoaded", () => {
+    // 1. Setup Scroll-Triggered Reveal Animations
+    // Dynamically add the 'reveal' class to all premium cards
+    const revealElements = document.querySelectorAll('.glass-card, .metric-card, .trust-card, .feature-highlights, .main-form-card');
+    revealElements.forEach(el => {
+        // Don't add reveal to the gamification card or hero section to avoid double animating/blank gaps
+        if(el.id !== 'gamification-card' && !el.classList.contains('hero-landing-section')) {
+            el.classList.add('reveal');
+        }
+    });
+
+    const revealObserver = new IntersectionObserver((entries, observer) => {
+        entries.forEach(entry => {
+            if(entry.isIntersecting) {
+                // Add a slight stagger delay based on DOM order
+                setTimeout(() => {
+                    entry.target.classList.add('active');
+                }, 100);
+                observer.unobserve(entry.target); // Animate only once per load
+            }
+        });
+    }, { threshold: 0.1, rootMargin: "0px 0px -20px 0px" });
+
+    document.querySelectorAll('.reveal').forEach(el => revealObserver.observe(el));
+
+    // Dynamic 3D Hover Tilt Effect for Glass Cards
+    document.querySelectorAll('.glass-card').forEach(card => {
+        card.addEventListener('mousemove', (e) => {
+            const rect = card.getBoundingClientRect();
+            const x = e.clientX - rect.left; // x position within the element
+            const y = e.clientY - rect.top;  // y position within the element
+            
+            const centerX = rect.width / 2;
+            const centerY = rect.height / 2;
+            
+            // Calculate rotation (max 10 degrees)
+            const rotateX = ((y - centerY) / centerY) * -10;
+            const rotateY = ((x - centerX) / centerX) * 10;
+            
+            card.style.transform = `perspective(1000px) rotateX(${rotateX}deg) rotateY(${rotateY}deg) scale(1.02)`;
+        });
+        
+        card.addEventListener('mouseleave', () => {
+            card.style.transform = `perspective(1000px) rotateX(0) rotateY(0) scale(1)`;
+        });
+    });
+
+    // 2. Setup Dynamic Number Counters for Trust Section
+    const trustH3s = document.querySelectorAll('.trust-card h3');
+    trustH3s.forEach(h3 => {
+        const text = h3.innerText;
+        // Extract the number and the suffix (e.g. "15+" -> 15 and "+")
+        const numMatch = text.match(/(\d+)/);
+        if(numMatch && !text.includes('Cr')) { // Handle Cr differently if needed, or just let regex catch 500
+            const num = numMatch[1];
+            h3.setAttribute('data-target', num);
+            h3.classList.add('counter-num');
+            const suffix = text.replace(num, '');
+            h3.setAttribute('data-suffix', suffix);
+            h3.innerText = '0' + suffix; 
+        } else if (text.includes('500Cr+')) {
+            h3.setAttribute('data-target', '500');
+            h3.classList.add('counter-num');
+            h3.setAttribute('data-suffix', 'Cr+');
+            h3.innerText = '0Cr+';
+        }
+    });
+
+    const counterObserver = new IntersectionObserver((entries, observer) => {
+        entries.forEach(entry => {
+            if(entry.isIntersecting) {
+                animateCounter(entry.target);
+                observer.unobserve(entry.target);
+            }
+        });
+    }, { threshold: 0.5 });
+
+    document.querySelectorAll('.counter-num, .counter-animate').forEach(el => counterObserver.observe(el));
+
+    function animateCounter(el) {
+        const target = +el.getAttribute('data-target');
+        const suffix = el.getAttribute('data-suffix') || '';
+        const duration = 2000; // 2 seconds counting animation
+        const increment = target / (duration / 16); // Assuming ~60fps
+        let current = 0;
+
+        const updateCounter = () => {
+            current += increment;
+            if(current < target) {
+                el.innerText = Math.ceil(current) + suffix;
+                requestAnimationFrame(updateCounter);
+            } else {
+                el.innerText = target + suffix;
+            }
+        };
+        updateCounter();
+    }
+});
+
+// Waitlist & AI Action Modal Functions
+let currentWaitlistSource = "Smart Card Waitlist";
+
+function openWaitlistModal(source = "Smart Card Waitlist", title = "Join the Elite Waitlist", subtitle = "Enter your details to secure early access.") {
+    currentWaitlistSource = source;
+    
+    // Update Modal Text dynamically
+    const titleEl = document.getElementById('waitlist-modal-title');
+    const subtitleEl = document.getElementById('waitlist-modal-subtitle');
+    if (titleEl) titleEl.innerText = title;
+    if (subtitleEl) subtitleEl.innerText = subtitle;
+
+    // Reset Form & Show Step 1
+    document.getElementById('waitlist-step-1').style.display = 'block';
+    document.getElementById('waitlist-success').style.display = 'none';
+    document.getElementById('waitlist-name').value = '';
+    document.getElementById('waitlist-phone').value = '';
+
+    document.getElementById('waitlist-modal').style.display = 'flex';
 }
 
-function closeLoginModal() {
-    document.getElementById('login-modal').style.display = 'none';
+function closeWaitlistModal() {
+    document.getElementById('waitlist-modal').style.display = 'none';
 }
 
-function updateUIOnLogin(user) {
-    // Update the Sidebar Button
-    const loginContainer = document.getElementById('login-btn-container');
-    if (loginContainer) {
-        loginContainer.innerHTML = `
-            <a class="nav-link" style="display:flex; justify-content:space-between; width:100%; align-items:center;">
-                <div style="display:flex; align-items:center; gap:10px;">
-                    <img src="${user.photoURL}" style="width:24px; height:24px; border-radius:50%;">
-                    <span style="font-size:12px;">${user.displayName.split(' ')[0]}</span>
-                </div>
-                <i class="fa-solid fa-right-from-bracket" title="Logout" onclick="logoutUser(event)" style="color:var(--text-secondary); cursor:pointer;"></i>
-            </a>
-        `;
-        loginContainer.onclick = null; // Remove the openLoginModal click
+function submitWaitlist() {
+    const name = document.getElementById('waitlist-name').value;
+    const phone = document.getElementById('waitlist-phone').value;
+    if (name.length > 2 && phone.length === 10) {
+        document.getElementById('waitlist-step-1').style.display = 'none';
+        document.getElementById('waitlist-success').style.display = 'block';
+
+        // Send to CRM
+        const sheetURL = "https://script.google.com/macros/s/AKfycbzxRIqLKmG9kf4V8Kh1APQofCFKiJ_-fputHfWCABzIFdJ0hNO5mD3Ic6InRsAeKb9PRA/exec";
+        const payload = {
+            loanType: currentWaitlistSource, // Uses dynamically set source
+            name: name,
+            phone: phone
+        };
+        fetch(sheetURL, {
+            method: 'POST',
+            mode: 'no-cors',
+            headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+            body: JSON.stringify(payload)
+        }).catch(err => console.error("Waitlist Sync Error:", err));
+    } else {
+        alert('Please enter a valid name and 10-digit mobile number.');
+    }
+}
+
+
+// TAX CALCULATOR LOGIC
+function calculateTax() {
+    let salary = parseInt(document.getElementById('tax-salary-input').value) || 0;
+    let other = parseInt(document.getElementById('tax-other-input').value) || 0;
+    let income = salary + other;
+    
+    let sec80c = parseInt(document.getElementById('tax-80c-input').value) || 0;
+    sec80c = Math.min(sec80c, 150000); // Max 1.5L
+    
+    let sec80d = parseInt(document.getElementById('tax-80d-input').value) || 0;
+    let hra = parseInt(document.getElementById('tax-hra-input').value) || 0;
+    let homeLoan = parseInt(document.getElementById('tax-homeloan-input').value) || 0;
+    
+    let deductions = sec80c + sec80d + hra + homeLoan;
+    // Standard Deduction
+    let stdDeduction = 50000;
+    
+    // --- OLD REGIME CALCULATION ---
+    // Standard Deduction is 50k for Old Regime
+    let oldStdDeduction = salary > 0 ? 50000 : 0;
+    let oldTaxable = Math.max(0, income - oldStdDeduction - deductions);
+    let oldTax = 0;
+    
+    if (oldTaxable > 1000000) {
+        oldTax += (oldTaxable - 1000000) * 0.30;
+        oldTax += 500000 * 0.20; // 5L to 10L
+        oldTax += 250000 * 0.05; // 2.5L to 5L
+    } else if (oldTaxable > 500000) {
+        oldTax += (oldTaxable - 500000) * 0.20;
+        oldTax += 250000 * 0.05;
+    } else if (oldTaxable > 250000) {
+        oldTax += (oldTaxable - 250000) * 0.05;
+    }
+    
+    // 87A Rebate for Old Regime (Income <= 5L)
+    if (oldTaxable <= 500000) {
+        oldTax = 0;
+    } else {
+        // Surcharge
+        if (income > 50000000) oldTax *= 1.37;
+        else if (income > 20000000) oldTax *= 1.25;
+        else if (income > 10000000) oldTax *= 1.15;
+        else if (income > 5000000) oldTax *= 1.10;
+        
+        oldTax = oldTax * 1.04; // 4% Cess
+    }
+    
+    // --- NEW REGIME CALCULATION (FY 2026-2027) ---
+    // Standard Deduction is 75k for New Regime
+    let newStdDeduction = salary > 0 ? 75000 : 0;
+    let newTaxable = Math.max(0, income - newStdDeduction);
+    let newTax = 0;
+    
+    if (newTaxable > 2400000) {
+        newTax += (newTaxable - 2400000) * 0.30;
+        newTax += 400000 * 0.25; // 20-24
+        newTax += 400000 * 0.20; // 16-20
+        newTax += 400000 * 0.15; // 12-16
+        newTax += 400000 * 0.10; // 8-12
+        newTax += 400000 * 0.05; // 4-8
+    } else if (newTaxable > 2000000) {
+        newTax += (newTaxable - 2000000) * 0.25;
+        newTax += 400000 * 0.20;
+        newTax += 400000 * 0.15;
+        newTax += 400000 * 0.10;
+        newTax += 400000 * 0.05;
+    } else if (newTaxable > 1600000) {
+        newTax += (newTaxable - 1600000) * 0.20;
+        newTax += 400000 * 0.15;
+        newTax += 400000 * 0.10;
+        newTax += 400000 * 0.05;
+    } else if (newTaxable > 1200000) {
+        newTax += (newTaxable - 1200000) * 0.15;
+        newTax += 400000 * 0.10;
+        newTax += 400000 * 0.05;
+    } else if (newTaxable > 800000) {
+        newTax += (newTaxable - 800000) * 0.10;
+        newTax += 400000 * 0.05;
+    } else if (newTaxable > 400000) {
+        newTax += (newTaxable - 400000) * 0.05;
+    }
+    
+    // 87A Rebate for New Regime (Income <= 12L)
+    if (newTaxable <= 1200000) {
+        newTax = 0;
+    } else {
+        let maxTaxAllowed = newTaxable - 1200000;
+        if (newTax > maxTaxAllowed) {
+            newTax = maxTaxAllowed;
+        }
+        // Surcharge (Capped at 25% for New Regime)
+        if (income > 20000000) newTax *= 1.25;
+        else if (income > 10000000) newTax *= 1.15;
+        else if (income > 5000000) newTax *= 1.10;
+        
+        newTax = newTax * 1.04; // 4% Cess
+    }
+    
+    // Format and Display
+    document.getElementById('tax-old-display').innerHTML = '<i class="fa-solid fa-indian-rupee-sign" style="font-size: 0.9em; margin-right: 2px;"></i>' + Math.round(oldTax).toLocaleString();
+    document.getElementById('tax-new-display').innerHTML = '<i class="fa-solid fa-indian-rupee-sign" style="font-size: 0.9em; margin-right: 2px;"></i>' + Math.round(newTax).toLocaleString();
+    
+    let banner = document.getElementById('tax-recommendation-banner');
+    let bannerText = document.getElementById('tax-recommendation-text');
+    
+    if (oldTax < newTax) {
+        banner.style.display = 'block';
+        banner.style.background = 'var(--brand-green)';
+        let diff = newTax - oldTax;
+        bannerText.innerHTML = 'Old Regime is better! You save <i class="fa-solid fa-indian-rupee-sign" style="font-size: 0.9em; margin-right: 2px;"></i>' + Math.round(diff).toLocaleString();
+    } else if (newTax < oldTax) {
+        banner.style.display = 'block';
+        banner.style.background = 'var(--brand-green)';
+        let diff = oldTax - newTax;
+        bannerText.innerHTML = 'New Regime is better! You save <i class="fa-solid fa-indian-rupee-sign" style="font-size: 0.9em; margin-right: 2px;"></i>' + Math.round(diff).toLocaleString();
+    } else {
+        banner.style.display = 'block';
+        banner.style.background = 'var(--text-secondary)';
+        bannerText.innerHTML = 'Both regimes have same tax (<i class="fa-solid fa-indian-rupee-sign" style="font-size: 0.9em; margin-right: 2px;"></i>' + Math.round(newTax).toLocaleString() + ')';
     }
 
-    // Admin Check for CRM Console
-    const adminEmails = ["nakulsverma@gmail.com", "help@moneyed.co.in"];
-    if (adminEmails.includes(user.email)) {
-        const crmItem = document.getElementById('nav-crm-item');
-        if (crmItem) crmItem.style.display = 'block';
+    // AI Insight for Tax
+    const insightBox = document.getElementById("tax-ai-insight");
+    const insightText = document.getElementById("tax-ai-text");
+    if(insightBox && insightText && income > 700000) {
+        insightBox.style.display = "block";
+        let current80c = sec80c;
+        if (current80c < 150000) {
+            let gap = 150000 - current80c;
+            insightText.innerHTML = `You haven't maxed out your <i class="fa-solid fa-indian-rupee-sign" style="font-size: 0.9em; margin-right: 2px;"></i>1.5L 80C limit! Investing <strong><i class="fa-solid fa-indian-rupee-sign" style="font-size: 0.9em; margin-right: 2px;"></i>${gap.toLocaleString('en-IN')}</strong> more in ELSS or PPF will save you additional tax under the Old Regime and build long-term wealth.`;
+        } else if (sec80d < 25000) {
+            insightText.innerHTML = `Your 80C is maxed out! Consider getting Health Insurance (Section 80D) to save more tax and secure your family's health.`;
+        } else {
+            insightText.innerHTML = `You are efficiently utilizing basic deductions. Consider Section 80CCD(1B) to invest an extra <i class="fa-solid fa-indian-rupee-sign" style="font-size: 0.9em; margin-right: 2px;"></i>50k in NPS for additional tax savings!`;
+        }
+    } else if (insightBox) {
+        insightBox.style.display = "none";
+    }
+}
+// Init calculate tax on load if possible, or wait for user input
+setTimeout(calculateTax, 1000);
+
+
+// --- ANALYTICS UTILITY ---
+function analyticsTrack(eventName, eventData = {}) {
+    if (typeof gtag === 'function') {
+        gtag('event', eventName, eventData);
+    }
+    if (typeof fbq === 'function') {
+        fbq('trackCustom', eventName, eventData);
     }
 }
 
-function logoutUser(e) {
-    if(e) e.stopPropagation();
-    auth.signOut().then(() => {
-        window.location.reload();
+// Fetch real leads from Firebase for CRM
+db.ref('leads').on('value', (snapshot) => {
+    const data = snapshot.val();
+    if (data) {
+        leads = Object.values(data).map(item => ({
+            name: item.name,
+            phone: item.phone,
+            loanType: item.loanType,
+            status: item.status || 'New',
+            date: new Date(item.timestamp).toLocaleDateString(),
+            city: 'Online Request',
+            income: 'TBD',
+            obligations: 'TBD',
+            cibil: 'TBD',
+            agent: 'Unassigned',
+            lastUpdated: new Date(item.timestamp).toLocaleDateString()
+        })).reverse();
+        renderCrmTable();
+        updateCrmDashboard();
+    }
+});
+
+function downloadLeadsExcel() {
+    if(leads.length === 0) {
+        alert("No data to download!");
+        return;
+    }
+    const worksheet = XLSX.utils.json_to_sheet(leads);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, "Leads");
+    XLSX.writeFile(workbook, "Moneyed_Leads.xlsx");
+}
+
+// --- UNIFIED CRM ROUTER ---
+window.syncToCRM = function(source, payload) {
+    const sheetURL = "https://script.google.com/macros/s/AKfycbzYWaSAYI_7yJ9U91KNRXfqPbaQCJeyzrPf1NJoPcJWnkANhA0E0bgsjZUQQQU076dQbg/exec";
+    
+    if (auth.currentUser) {
+        payload.name = payload.name || auth.currentUser.displayName || "Unknown User";
+        payload.phone = payload.phone || auth.currentUser.phoneNumber || "Unknown Phone";
+    } else {
+        payload.name = payload.name || "Anonymous";
+        payload.phone = payload.phone || "Not Provided";
+    }
+    
+    payload.loanType = source;
+    payload.timestamp = new Date().toISOString();
+    payload.status = 'New';
+    
+    try {
+        db.ref('leads').push(payload).catch(e => console.error("Firebase Error:", e));
+    } catch(e) {}
+    
+    fetch(sheetURL, {
+        method: "POST",
+        mode: "no-cors",
+        headers: { "Content-Type": "text/plain;charset=utf-8" },
+        body: JSON.stringify(payload)
+    }).catch(e => console.error("Sheet Error:", e));
+}
+
+// Debounced CRM Router for calculators (avoids spam on keystrokes)
+window.crmSyncTimers = {};
+window.debouncedSyncToCRM = function(source, payload, delayMs = 2000) {
+    if (window.crmSyncTimers[source]) {
+        clearTimeout(window.crmSyncTimers[source]);
+    }
+    window.crmSyncTimers[source] = setTimeout(() => {
+        window.syncToCRM(source, payload);
+        delete window.crmSyncTimers[source];
+    }, delayMs);
+};
+
+// --- PROFILE COMPLETION MODAL ---
+window.openProfileModal = function() {
+    document.getElementById('profile-modal').style.display = 'flex';
+};
+window.saveUserProfile = function() {
+    const inc = document.getElementById('profile-income').value;
+    const emi = document.getElementById('profile-emi').value;
+    const city = document.getElementById('profile-city').value;
+    
+    if (inc) window.userProfile.income = parseFloat(inc);
+    if (emi) window.userProfile.obligations = parseFloat(emi);
+    
+    // Hide Banner & Modal
+    document.getElementById('profile-completion-banner').style.display = 'none';
+    document.getElementById('profile-modal').style.display = 'none';
+    
+    // Trigger FOIR Update if needed
+    if (typeof updateFOIRGauge === 'function') updateFOIRGauge();
+    alert("Profile saved! AI Advisor is now personalized for you.");
+};;
+
+// --- Language Toggle Logic ---
+let currentLang = 'en';
+const langDict = {
+    'en': {
+        'hero-badge': '<i class="fa-solid fa-award"></i> India\'s #1 Loan Advisory Platform',
+        'hero-title': 'Optimize Your Debt. <br/> <span style="color: var(--brand-green);">Maximize Your Savings.</span>',
+        'hero-subtitle': 'Get 1-on-1 expert advisory, structure your loans, check CIBIL accurately, and find the lowest interest rates across 15+ banks.',
+        'hero-cta1': 'Check Eligibility Free <i class="fa-solid fa-arrow-right"></i>'
+    },
+    'hi': {
+        'hero-badge': '<i class="fa-solid fa-award"></i> भारत का #1 ऋण सलाहकार प्लेटफ़ॉर्म',
+        'hero-title': 'अपने कर्ज़ को कम करें। <br/> <span style="color: var(--brand-green);">अपनी बचत बढ़ाएँ।</span>',
+        'hero-subtitle': '1-on-1 विशेषज्ञ सलाह प्राप्त करें, अपने ऋणों को संरचना करें, सटीक सिबिल चेक करें, और 15+ बैंकों में सबसे कम ब्याज दरें खोजें।',
+        'hero-cta1': 'नि:शुल्क योग्यता जांचें <i class="fa-solid fa-arrow-right"></i>'
+    }
+};
+
+window.toggleLanguage = function() {
+    currentLang = currentLang === 'en' ? 'hi' : 'en';
+    for (let key in langDict[currentLang]) {
+        let el = document.getElementById(key);
+        if (el) el.innerHTML = langDict[currentLang][key];
+    }
+    
+    // Toggle button active state
+    let btn = document.getElementById('lang-toggle-btn');
+    if (btn) {
+        if (currentLang === 'hi') {
+            btn.style.background = 'var(--brand-green)';
+            btn.style.color = '#fff';
+            btn.style.borderColor = 'var(--brand-green)';
+        } else {
+            btn.style.background = 'transparent';
+            btn.style.color = 'var(--text-color)';
+            btn.style.borderColor = 'var(--border-color)';
+        }
+    }
+};
+
+// Sub-tab switching for calculators
+const subTabBtns = document.querySelectorAll(".sub-tab-btn");
+subTabBtns.forEach(btn => {
+    btn.addEventListener("click", () => {
+        // Remove active from all siblings
+        const parent = btn.parentElement;
+        parent.querySelectorAll(".sub-tab-btn").forEach(b => b.classList.remove("active"));
+        btn.classList.add("active");
+        
+        // Hide all sub-panes
+        const container = btn.closest(".tab-pane");
+        container.querySelectorAll(".sub-tab-pane").forEach(pane => pane.classList.remove("active"));
+        
+        // Show target pane
+        const targetId = btn.getAttribute("data-subtab");
+        if (targetId) {
+            const targetPane = document.getElementById(targetId);
+            if (targetPane) targetPane.classList.add("active");
+        }
+    });
+});
+
+// Mobile select fallback for calculators
+const mobileSelect = document.querySelector(".calc-mobile-select");
+if (mobileSelect) {
+    mobileSelect.addEventListener("change", (e) => {
+        const targetId = e.target.value;
+        const container = mobileSelect.closest(".tab-pane");
+        container.querySelectorAll(".sub-tab-pane").forEach(pane => pane.classList.remove("active"));
+        const targetPane = document.getElementById(targetId);
+        if (targetPane) targetPane.classList.add("active");
     });
 }
 
-// Listen for auth state changes (Keeps user logged in after refresh)
-auth.onAuthStateChanged((user) => {
-    if (user) {
-        updateUIOnLogin(user);
-    }
-});
+// Task 3: CIBIL PDF Upload
+const dropZone = document.getElementById("cibil-drop-zone");
+const fileInput = document.getElementById("cibil-file-input");
 
-function initiateGoogleLogin() {
-    document.getElementById('firebase-notice').style.display = 'none'; 
+if (dropZone && fileInput) {
+    dropZone.addEventListener("click", () => fileInput.click());
     
-    auth.signInWithPopup(googleProvider)
-        .then((result) => {
-            const user = result.user;
+    fileInput.addEventListener("change", (e) => {
+        if (e.target.files.length > 0) {
+            const file = e.target.files[0];
+            dropZone.innerHTML = `<i class="fa-solid fa-circle-notch fa-spin"></i><h4>Parsing ${file.name}...</h4><p>Extracting data using DPDP compliant OCR...</p>`;
             
-            // Save user to Firebase Realtime Database
-            db.ref('users/' + user.uid).set({
-                name: user.displayName,
-                email: user.email,
-                photoURL: user.photoURL,
-                lastLogin: new Date().toISOString()
-            });
-
-            closeLoginModal();
-            updateUIOnLogin(user);
-            
+            // Simulate processing
             setTimeout(() => {
-                alert(`Welcome to Moneyed, ${user.displayName}! A welcome email will be dispatched shortly.`);
-            }, 100);
-            
-        })
-        .catch((error) => {
-            console.error("Firebase Login Error:", error);
-            alert("Login failed: " + error.message);
-        });
+                const parsedGrid = document.getElementById("cibil-parsed-results");
+                if (parsedGrid) {
+                    parsedGrid.style.display = "block";
+                    
+                    // Inject realistic mock data into summary
+                    document.getElementById("cibil-summary-grid").innerHTML = `
+                        <div class="stat-box" style="padding: 15px; border-radius: 8px; background: rgba(0,0,0,0.2); border-left: 4px solid var(--brand-green);">
+                            <p style="margin:0; font-size: 11px; color: var(--text-muted);">CIBIL Score</p>
+                            <h3 style="margin:5px 0 0; color: var(--neon-green); font-size: 24px;">782</h3>
+                        </div>
+                        <div class="stat-box" style="padding: 15px; border-radius: 8px; background: rgba(0,0,0,0.2); border-left: 4px solid #F3A712;">
+                            <p style="margin:0; font-size: 11px; color: var(--text-muted);">Active Accounts</p>
+                            <h3 style="margin:5px 0 0; color: white; font-size: 20px;">4</h3>
+                        </div>
+                        <div class="stat-box" style="padding: 15px; border-radius: 8px; background: rgba(0,0,0,0.2); border-left: 4px solid #E50914;">
+                            <p style="margin:0; font-size: 11px; color: var(--text-muted);">Recent Enquiries</p>
+                            <h3 style="margin:5px 0 0; color: white; font-size: 20px;">1</h3>
+                        </div>
+                        <div class="stat-box" style="padding: 15px; border-radius: 8px; background: rgba(0,0,0,0.2); border-left: 4px solid var(--brand-green);">
+                            <p style="margin:0; font-size: 11px; color: var(--text-muted);">Total Outstanding</p>
+                            <h3 style="margin:5px 0 0; color: white; font-size: 20px;">₹4,32,500</h3>
+                        </div>
+                    `;
+
+                    // Inject realistic active accounts
+                    document.getElementById("cibil-active-table-body").innerHTML = `
+                        <tr style="border-bottom: 1px solid var(--border-glass);">
+                            <td style="padding:10px; font-size:13px;">Nakul Verma</td>
+                            <td style="padding:10px; font-size:13px;">Personal Loan</td>
+                            <td style="padding:10px; font-size:13px;">HDFC****4321</td>
+                            <td style="padding:10px; font-size:13px;">Individual</td>
+                            <td style="padding:10px; font-size:13px;">-</td>
+                            <td style="padding:10px; font-size:13px;">₹5,00,000</td>
+                            <td style="padding:10px; font-size:13px;">₹5,00,000</td>
+                            <td style="padding:10px; font-size:13px;">₹3,45,000</td>
+                            <td style="padding:10px; font-size:13px; color:var(--brand-green);">₹0</td>
+                            <td style="padding:10px; font-size:13px;">₹15,400</td>
+                            <td style="padding:10px; font-size:13px;">12-05-2024</td>
+                            <td style="padding:10px; font-size:13px; color:var(--brand-green);">Standard</td>
+                            <td style="padding:10px; font-size:13px;">000 000 000</td>
+                        </tr>
+                        <tr style="border-bottom: 1px solid var(--border-glass);">
+                            <td style="padding:10px; font-size:13px;">Nakul Verma</td>
+                            <td style="padding:10px; font-size:13px;">Credit Card</td>
+                            <td style="padding:10px; font-size:13px;">ICICI****9876</td>
+                            <td style="padding:10px; font-size:13px;">Individual</td>
+                            <td style="padding:10px; font-size:13px;">₹1,50,000</td>
+                            <td style="padding:10px; font-size:13px;">-</td>
+                            <td style="padding:10px; font-size:13px;">₹1,20,000</td>
+                            <td style="padding:10px; font-size:13px;">₹87,500</td>
+                            <td style="padding:10px; font-size:13px; color:var(--brand-green);">₹0</td>
+                            <td style="padding:10px; font-size:13px;">-</td>
+                            <td style="padding:10px; font-size:13px;">03-11-2023</td>
+                            <td style="padding:10px; font-size:13px; color:var(--brand-green);">Standard</td>
+                            <td style="padding:10px; font-size:13px;">000 000 000</td>
+                        </tr>
+                    `;
+
+                    // Inject recent inquiries
+                    document.getElementById("cibil-inquiries-table-body").innerHTML = `
+                        <tr style="border-bottom: 1px solid var(--border-glass);">
+                            <td style="padding:10px; font-size:13px;">15-04-2026</td>
+                            <td style="padding:10px; font-size:13px;">AXIS BANK LTD</td>
+                        </tr>
+                    `;
+                }
+                
+                dropZone.innerHTML = `<i class="fa-solid fa-check text-green" style="font-size:24px; margin-bottom:10px;"></i><h4>Report Processed</h4><p>${file.name} successfully parsed. Scroll down to view data.</p>`;
+            }, 2000);
+        }
+    });
 }
-document.addEventListener('DOMContentLoaded', () => {
-    const toggleBtn = document.getElementById('desktop-sidebar-toggle');
-    const appContainer = document.querySelector('.app-container');
-    if (toggleBtn && appContainer) {
-        toggleBtn.addEventListener('click', () => {
-            appContainer.classList.toggle('sidebar-collapsed');
-        });
+
+// Task 4: AI SMS Parser Prototype
+window.parseBankSMS = function() {
+    const text = document.getElementById("ai-sms-input").value;
+    const resultBox = document.getElementById("sms-parse-result");
+    const btn = document.getElementById("btn-parse-sms");
+    
+    if (!text.trim()) {
+        alert("Please paste an SMS first.");
+        return;
     }
-});
+    
+    btn.innerHTML = `<i class="fa-solid fa-circle-notch fa-spin"></i> Parsing with AI...`;
+    
+    setTimeout(() => {
+        // Regex to extract amount
+        const amountMatch = text.match(/(?:Rs\.?|INR)\s*([\d,]+\.?\d*)/i);
+        const amount = amountMatch ? parseFloat(amountMatch[1].replace(/,/g, '')) : 0;
+        
+        // Regex to extract merchant (basic heuristic)
+        let merchant = "Unknown Merchant";
+        const vpaMatch = text.match(/VPA\s+([a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+)/i);
+        const toMatch = text.match(/to\s+([A-Za-z0-9 ]+?)(?:\.|\n|Avl)/i);
+        if (vpaMatch) {
+            merchant = vpaMatch[1].split('@')[0];
+        } else if (toMatch) {
+            merchant = toMatch[1].trim();
+        }
+        
+        if (amount > 0) {
+            resultBox.style.display = "block";
+            resultBox.innerHTML = `<strong>Extracted Successfully:</strong><br/>Amount: <strong class="text-green">₹${amount.toLocaleString('en-IN')}</strong><br/>Merchant: <strong>${merchant}</strong><br/>Category: <strong>Identified as 'Needs'</strong>`;
+            
+            // Add to system state and database
+            let category = "needs-other";
+            const textLower = merchant.toLowerCase();
+            if (textLower.includes("swiggy") || textLower.includes("zomato") || textLower.includes("food")) {
+                category = "wants-food";
+            } else if (textLower.includes("netflix") || textLower.includes("prime") || textLower.includes("movie")) {
+                category = "wants-entertainment";
+            } else if (textLower.includes("uber") || textLower.includes("ola") || textLower.includes("petrol")) {
+                category = "wants-travel";
+            } else if (textLower.includes("amazon") || textLower.includes("flipkart") || textLower.includes("myntra")) {
+                category = "wants-shopping";
+            }
+            
+            const newTx = {
+                id: 'tx-sms-' + Date.now(),
+                amount: amount,
+                category: category,
+                note: merchant,
+                date: new Date().toISOString().split('T')[0]
+            };
+            
+            if (!window.expenseTransactions) {
+                window.expenseTransactions = [];
+            }
+            window.expenseTransactions.unshift(newTx);
+            
+            // Sync to CRM/Firebase as requested in Phase 1
+            if (typeof window.syncToCRM === 'function') {
+                window.syncToCRM("SMS AI Parse", {
+                    amount: amount,
+                    category: category,
+                    merchant: merchant,
+                    details: `Parsed SMS: ₹${amount} at ${merchant}`
+                });
+            }
+
+            // Centralized update
+            if (typeof updateExpenseDashboard === 'function') {
+                updateExpenseDashboard();
+            }
+        } else {
+            resultBox.style.display = "block";
+            resultBox.innerHTML = `<span class="text-red">Failed to parse amount. Please ensure the SMS contains 'INR' or 'Rs'.</span>`;
+        }
+        
+        btn.innerHTML = `<i class="fa-solid fa-wand-magic-sparkles"></i> AI Se Parse Karo`;
+    }, 1500);
+};
+
+/* -------------------------------------
+   LEAD GENERATION MODAL LOGIC (MOVED FROM AUTH.JS FOR ADBLOCK BYPASS)
+   ------------------------------------- */
+
+window.openLeadModal = function() {
+    const modal = document.getElementById("lead-gen-modal");
+    if (!modal) return;
+    modal.style.display = "flex";
+    setTimeout(() => { modal.classList.add("active"); }, 10);
+    const step1 = document.getElementById("lead-step-1");
+    const step2 = document.getElementById("lead-step-2");
+    const step3 = document.getElementById("lead-step-3");
+    const successStep = document.getElementById("lead-step-success");
+    if(step1) step1.style.display = "block";
+    if(step2) step2.style.display = "none";
+    if(step3) step3.style.display = "none";
+    if(successStep) successStep.style.display = "none";
+    
+    if (window.updateLeadProgress) window.updateLeadProgress(1);
+};
+
+window.closeLeadModal = function() {
+    const modal = document.getElementById("lead-gen-modal");
+    if(!modal) return;
+    modal.classList.remove("active");
+    setTimeout(() => { modal.style.display = "none"; }, 400);
+};
+
+window.nextLeadStep = function(step) {
+    document.querySelectorAll('.lead-step').forEach(el => el.style.display = 'none');
+    const targetStep = document.getElementById(`lead-step-${step}`);
+    if(targetStep) {
+        targetStep.style.display = 'block';
+        if (window.updateLeadProgress) window.updateLeadProgress(step);
+    }
+};
+
+window.prevLeadStep = function(step) {
+    document.querySelectorAll('.lead-step').forEach(el => el.style.display = 'none');
+    const targetStep = document.getElementById(`lead-step-${step}`);
+    if(targetStep) {
+        targetStep.style.display = 'block';
+        if (window.updateLeadProgress) window.updateLeadProgress(step);
+    }
+};
+
+window.updateLeadProgress = function(step) {
+    const bar = document.getElementById("lead-progress-bar");
+    if (step === 1 && bar) bar.style.width = "33%";
+    if (step === 2 && bar) bar.style.width = "66%";
+    if (step === 3 && bar) bar.style.width = "100%";
+    for(let i=1; i<=3; i++) {
+        const ind = document.getElementById(`step-ind-${i}`);
+        if(ind) {
+            ind.classList.remove('active', 'completed');
+            if(i < step) ind.classList.add('completed');
+            if(i === step) ind.classList.add('active');
+        }
+    }
+};
+
+window.submitLeadForm = function() {
+    const btn = document.getElementById("submit-lead-btn");
+    const name = document.getElementById("lead-name").value;
+    const phone = document.getElementById("lead-phone").value;
+    const type = document.getElementById("lead-type").value;
+    if(!name || phone.length !== 10 || !type) {
+        alert("Please fill all details correctly.");
+        return;
+    }
+    btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Submitting...';
+    btn.disabled = true;
+    
+    const sheetURL = "https://script.google.com/macros/s/AKfycbzYWaSAYI_7yJ9U91KNRXfqPbaQCJeyzrPf1NJoPcJWnkANhA0E0bgsjZUQQQU076dQbg/exec";
+    const payload = {
+        name: name,
+        phone: phone,
+        loanType: type,
+        timestamp: new Date().toISOString(),
+        status: 'New'
+    };
+
+    try {
+        if(typeof db !== 'undefined') {
+            db.ref('leads').push(payload).catch(e => console.error("Firebase Push Error:", e));
+        }
+    } catch(e) {}
+    
+    fetch(sheetURL, {
+        method: "POST",
+        mode: "no-cors",
+        headers: { "Content-Type": "text/plain;charset=utf-8" },
+        body: JSON.stringify(payload)
+    }).then(() => {
+        document.querySelectorAll('.lead-step').forEach(el => el.style.display = 'none');
+        document.getElementById("lead-step-success").style.display = "block";
+        btn.innerHTML = '<i class="fa-solid fa-paper-plane"></i> Submit Request';
+        btn.disabled = false;
+        document.getElementById("lead-name").value = "";
+        document.getElementById("lead-phone").value = "";
+        document.getElementById("lead-type").value = "";
+    }).catch(err => {
+        console.error("Error:", err);
+        alert("Error saving request. Please try again.");
+        btn.innerHTML = '<i class="fa-solid fa-paper-plane"></i> Submit Request';
+        btn.disabled = false;
+    });
+};
