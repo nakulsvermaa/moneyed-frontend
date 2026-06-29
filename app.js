@@ -2767,8 +2767,8 @@ if (dropZone && fileInput) {
 
                     // Row background + left-border accent per risk level
                     function rowStyle(cls, isClosed) {
-                        if (cls === 'settled') return 'background:rgba(139,0,0,0.13); border-left:4px solid #8B0000;';
-                        if (cls === 'dpd')     return 'background:rgba(220,53,69,0.07); border-left:4px solid #dc3545;';
+                        if (cls === 'settled') return 'background:rgba(220,80,0,0.22); border-left:4px solid #E05200;';
+                        if (cls === 'dpd')     return 'background:rgba(243,167,18,0.12); border-left:4px solid #F3A712;';
                         if (isClosed)          return 'background:rgba(255,255,255,0.03); border-left:4px solid #555; opacity:0.85;';
                         return 'border-left:4px solid var(--brand-green);';
                     }
