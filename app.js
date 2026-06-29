@@ -2593,14 +2593,45 @@ if (dropZone && fileInput) {
             const file = e.target.files[0];
             dropZone.innerHTML = `<i class="fa-solid fa-circle-notch fa-spin"></i><h4>Parsing ${file.name}...</h4><p>Extracting data using DPDP compliant OCR...</p>`;
             
-            // Show loading pane on the right side
             const placeholder = document.getElementById("cibil-placeholder");
             const loadingPane = document.getElementById("cibil-loading-pane");
             const resultsPane = document.getElementById("cibil-results-pane");
+            const successPane = document.getElementById("cibil-success-pane");
             
             if (placeholder) placeholder.style.display = "none";
             if (resultsPane) resultsPane.style.display = "none";
+            if (successPane) successPane.style.display = "none";
             if (loadingPane) loadingPane.style.display = "block";
+            
+            // Gamified Animation sequence
+            const title = document.getElementById("gamified-loading-title");
+            const desc = document.getElementById("gamified-loading-desc");
+            const fill = document.getElementById("gamified-progress-fill");
+            
+            if (fill) fill.style.width = "0%";
+            if (title) title.textContent = "Initializing Risk Analysis...";
+            if (desc) desc.textContent = "Establishing secure connection to credit bureaus via 256-bit encryption...";
+            
+            setTimeout(() => {
+                if (fill) fill.style.width = "40%";
+                if (title) title.textContent = "Scanning Payment History...";
+                if (desc) desc.textContent = "Extracting trade lines, late payments, and credit inquiries...";
+            }, 800);
+            
+            setTimeout(() => {
+                if (fill) fill.style.width = "75%";
+                if (title) title.textContent = "Evaluating Risk Profile...";
+                if (desc) desc.textContent = "Calculating Debt-to-Income ratio and identifying risk flags...";
+            }, 1800);
+            
+            const minDelay = new Promise(resolve => {
+                setTimeout(() => {
+                    if (fill) fill.style.width = "95%";
+                    if (title) title.textContent = "Finalizing Report...";
+                    if (desc) desc.textContent = "Generating personalized insights and improvement strategies...";
+                    setTimeout(resolve, 600); // 100% time
+                }, 2600);
+            });
             
             const formData = new FormData();
             formData.append('file', file);
@@ -2608,12 +2639,17 @@ if (dropZone && fileInput) {
             const cibilEndpoint = isLocalhost
                 ? 'http://127.0.0.1:5000/api/upload-cibil'
                 : `${API_BASE_URL}/api/upload-cibil`;
-            fetch(cibilEndpoint, {
-                method: 'POST',
-                body: formData
-            })
-            .then(res => res.json())
-            .then(data => {
+            Promise.all([
+                fetch(cibilEndpoint, {
+                    method: 'POST',
+                    body: formData
+                }).then(res => res.json()).catch(err => {
+                    console.error(err);
+                    return {error: "Network error occurred"};
+                }),
+                minDelay
+            ])
+            .then(([data]) => {
                 if(data.error) {
                     dropZone.innerHTML = `<i class="fa-solid fa-triangle-exclamation text-red" style="font-size:24px; margin-bottom:10px;"></i><h4>Parsing Failed</h4><p>${data.error}</p>`;
                     if (loadingPane) loadingPane.style.display = "none";
@@ -2633,9 +2669,17 @@ if (dropZone && fileInput) {
                 if (parsedGrid) {
                     parsedGrid.style.display = "block";
                     
-                    // Show results pane on the right
+                    // Show success pane on the right instead of results immediately
                     if (loadingPane) loadingPane.style.display = "none";
-                    if (resultsPane) resultsPane.style.display = "block";
+                    if (successPane) successPane.style.display = "block";
+                    
+                    document.getElementById("btn-view-results").onclick = function() {
+                        if (successPane) successPane.style.display = "none";
+                        if (resultsPane) {
+                            resultsPane.style.display = "block";
+                            resultsPane.classList.remove("hidden"); // ensure it is completely visible
+                        }
+                    };
 
                     userProfile.cibil = data.score;
                     applyCibilTheme(data.score);
@@ -2706,58 +2750,97 @@ if (dropZone && fileInput) {
                         </div>
                     `;
 
-                    // Active accounts table (no Date Closed column)
+                    // ── Row classifier ──────────────────────────────────────
+                    function classifyRow(acc) {
+                        const BAD_DPD = /^(?!000$|STD$)[0-9]{3}$|^(?:DBT|SMA|LSS|SUB|XXX|#{1,3})$/i;
+                        const SETTLED = /^(?:WO|SET)$/i;
+                        const hist = (acc.PaymentHistory || '').split(/\s+/);
+                        const hasSettled  = hist.some(t => SETTLED.test(t)) ||
+                                            /written.?off|settled|loss|LSS|write.?off/i.test(acc.PaymentStatus);
+                        const hasBadDpd   = hist.some(t => BAD_DPD.test(t)) ||
+                                            /SMA|SUB|DBT|doubtful|sub.?standard|special.?mention/i.test(acc.PaymentStatus);
+                        const hasOverdue  = acc.AmountOverdue > 0;
+                        if (hasSettled) return 'settled';
+                        if (hasBadDpd || hasOverdue) return 'dpd';
+                        return 'clean';
+                    }
+
+                    // Row background + left-border accent per risk level
+                    function rowStyle(cls, isClosed) {
+                        if (cls === 'settled') return 'background:rgba(139,0,0,0.13); border-left:4px solid #8B0000;';
+                        if (cls === 'dpd')     return 'background:rgba(220,53,69,0.07); border-left:4px solid #dc3545;';
+                        if (isClosed)          return 'background:rgba(255,255,255,0.03); border-left:4px solid #555; opacity:0.85;';
+                        return 'border-left:4px solid var(--brand-green);';
+                    }
+
+                    function statusBadge(status, cls) {
+                        if (cls === 'settled') return `<span style="background:#8B0000;color:#fff;padding:2px 8px;border-radius:12px;font-size:11px;font-weight:700;">${status}</span>`;
+                        if (cls === 'dpd')     return `<span style="background:#dc3545;color:#fff;padding:2px 8px;border-radius:12px;font-size:11px;font-weight:700;">${status}</span>`;
+                        if (/closed/i.test(status)) return `<span style="background:rgba(255,255,255,0.1);color:#aaa;padding:2px 8px;border-radius:12px;font-size:11px;">Closed</span>`;
+                        return `<span style="background:rgba(24,201,121,0.15);color:#18C979;padding:2px 8px;border-radius:12px;font-size:11px;font-weight:600;">Active</span>`;
+                    }
+
+                    function amtCell(val, danger) {
+                        const formatted = `₹${(val||0).toLocaleString('en-IN')}`;
+                        if (danger && val > 0) return `<span style="color:#dc3545;font-weight:700;">${formatted}</span>`;
+                        if (!val || val === 0) return `<span style="color:rgba(255,255,255,0.3);">₹0</span>`;
+                        return formatted;
+                    }
+
+                    const TD = 'padding:11px 12px;font-size:13px;white-space:nowrap;vertical-align:middle;';
+                    const TD_LAST = 'padding:11px 12px;font-size:12px;vertical-align:middle;min-width:200px;';
+
+                    // Active accounts table
                     const activeAccounts = accounts.filter(a => !a.PaymentStatus.includes('Closed'));
                     let activeHtml = '';
-                    activeAccounts.forEach(acc => {
-                        const overdueBadge = acc.AmountOverdue > 0
-                            ? `<span style="color:#dc3545;font-weight:700;">₹${acc.AmountOverdue.toLocaleString('en-IN')}</span>`
-                            : `<span style="color:var(--brand-green);">₹0</span>`;
-                        activeHtml += `<tr style="border-bottom:1px solid var(--border-glass);">
-                            <td style="padding:10px;font-size:13px;white-space:nowrap;">${summary.name || 'N/A'}</td>
-                            <td style="padding:10px;font-size:13px;white-space:nowrap;">${acc.AccountType || '-'}</td>
-                            <td style="padding:10px;font-size:13px;white-space:nowrap;">${acc.AccountNumber || '-'}</td>
-                            <td style="padding:10px;font-size:13px;white-space:nowrap;">${acc.Ownership || 'Individual'}</td>
-                            <td style="padding:10px;font-size:13px;white-space:nowrap;">₹${(acc.CreditLimit||0).toLocaleString('en-IN')}</td>
-                            <td style="padding:10px;font-size:13px;white-space:nowrap;">₹${(acc.SanctionedAmount||0).toLocaleString('en-IN')}</td>
-                            <td style="padding:10px;font-size:13px;white-space:nowrap;">₹${(acc.HighCredit||0).toLocaleString('en-IN')}</td>
-                            <td style="padding:10px;font-size:13px;white-space:nowrap;">₹${(acc.CurrentBalance||0).toLocaleString('en-IN')}</td>
-                            <td style="padding:10px;font-size:13px;white-space:nowrap;">${overdueBadge}</td>
-                            <td style="padding:10px;font-size:13px;white-space:nowrap;color:var(--brand-green);">${acc.EMI > 0 ? '₹'+acc.EMI.toLocaleString('en-IN') : '-'}</td>
-                            <td style="padding:10px;font-size:13px;white-space:nowrap;">${acc.DateOpened || '-'}</td>
-                            <td style="padding:10px;font-size:13px;white-space:nowrap;color:var(--brand-green);">${acc.PaymentStatus || 'Active'}</td>
-                            <td style="padding:10px;font-size:12px;max-width:240px;word-break:break-all;line-height:1.7;">${renderPaymentHistory(acc.PaymentHistory)}</td>
+                    activeAccounts.forEach((acc, idx) => {
+                        const cls = classifyRow(acc);
+                        const rs  = rowStyle(cls, false);
+                        const zebra = idx % 2 === 1 ? 'filter:brightness(0.96);' : '';
+                        activeHtml += `<tr style="${rs}${zebra}border-bottom:1px solid rgba(255,255,255,0.06);transition:background 0.2s;">
+                            <td style="${TD}">${summary.name || 'N/A'}</td>
+                            <td style="${TD}">${acc.AccountType || '-'}</td>
+                            <td style="${TD}font-family:monospace;letter-spacing:0.5px;">${acc.AccountNumber || '-'}</td>
+                            <td style="${TD}">${acc.Ownership || 'Individual'}</td>
+                            <td style="${TD}">${amtCell(acc.CreditLimit)}</td>
+                            <td style="${TD}">${amtCell(acc.SanctionedAmount)}</td>
+                            <td style="${TD}">${amtCell(acc.HighCredit)}</td>
+                            <td style="${TD}font-weight:600;">${amtCell(acc.CurrentBalance)}</td>
+                            <td style="${TD}">${amtCell(acc.AmountOverdue, true)}</td>
+                            <td style="${TD}color:var(--brand-green);font-weight:600;">${acc.EMI > 0 ? '₹'+acc.EMI.toLocaleString('en-IN') : '<span style="color:rgba(255,255,255,0.25);">—</span>'}</td>
+                            <td style="${TD}">${acc.DateOpened || '-'}</td>
+                            <td style="${TD}">${statusBadge(acc.PaymentStatus || 'Active', cls)}</td>
+                            <td style="${TD_LAST}line-height:1.8;">${renderPaymentHistory(acc.PaymentHistory)}</td>
                         </tr>`;
                     });
-                    if (!activeHtml) activeHtml = `<tr><td colspan="13" style="padding:20px;text-align:center;">No active accounts found</td></tr>`;
+                    if (!activeHtml) activeHtml = `<tr><td colspan="13" style="padding:24px;text-align:center;color:rgba(255,255,255,0.4);">No active accounts found</td></tr>`;
                     document.getElementById("cibil-active-table-body").innerHTML = activeHtml;
 
                     // All accounts table (active + closed)
                     let allHtml = '';
-                    accounts.forEach(acc => {
+                    accounts.forEach((acc, idx) => {
                         const isClosed = acc.PaymentStatus.includes('Closed');
-                        const statusColor = isClosed ? '#888' : 'var(--brand-green)';
-                        const overdueBadge = acc.AmountOverdue > 0
-                            ? `<span style="color:#dc3545;font-weight:700;">₹${acc.AmountOverdue.toLocaleString('en-IN')}</span>`
-                            : `<span style="color:var(--brand-green);">₹0</span>`;
-                        allHtml += `<tr style="border-bottom:1px solid var(--border-glass); opacity:${isClosed ? '0.75' : '1'};">
-                            <td style="padding:10px;font-size:13px;white-space:nowrap;">${summary.name || 'N/A'}</td>
-                            <td style="padding:10px;font-size:13px;white-space:nowrap;">${acc.AccountType || '-'}</td>
+                        const cls = classifyRow(acc);
+                        const rs  = rowStyle(cls, isClosed);
+                        const zebra = idx % 2 === 1 ? 'filter:brightness(0.96);' : '';
+                        allHtml += `<tr style="${rs}${zebra}border-bottom:1px solid rgba(255,255,255,0.06);">
+                            <td style="${TD}">${summary.name || 'N/A'}</td>
+                            <td style="${TD}">${acc.AccountType || '-'}</td>
                             <td style="padding:10px;font-size:13px;white-space:nowrap;">${acc.AccountNumber || '-'}</td>
-                            <td style="padding:10px;font-size:13px;white-space:nowrap;">${acc.Ownership || 'Individual'}</td>
-                            <td style="padding:10px;font-size:13px;white-space:nowrap;">₹${(acc.CreditLimit||0).toLocaleString('en-IN')}</td>
-                            <td style="padding:10px;font-size:13px;white-space:nowrap;">₹${(acc.SanctionedAmount||0).toLocaleString('en-IN')}</td>
-                            <td style="padding:10px;font-size:13px;white-space:nowrap;">₹${(acc.HighCredit||0).toLocaleString('en-IN')}</td>
-                            <td style="padding:10px;font-size:13px;white-space:nowrap;">₹${(acc.CurrentBalance||0).toLocaleString('en-IN')}</td>
-                            <td style="padding:10px;font-size:13px;white-space:nowrap;">${overdueBadge}</td>
-                            <td style="padding:10px;font-size:13px;white-space:nowrap;">${acc.EMI > 0 ? '₹'+acc.EMI.toLocaleString('en-IN') : '-'}</td>
-                            <td style="padding:10px;font-size:13px;white-space:nowrap;">${acc.DateOpened || '-'}</td>
-                            <td style="padding:10px;font-size:13px;white-space:nowrap;">${acc.DateClosed || '-'}</td>
-                            <td style="padding:10px;font-size:13px;white-space:nowrap;color:${statusColor};">${acc.PaymentStatus || '-'}</td>
-                            <td style="padding:10px;font-size:12px;max-width:240px;word-break:break-all;line-height:1.7;">${renderPaymentHistory(acc.PaymentHistory)}</td>
+                            <td style="${TD}">${acc.Ownership || 'Individual'}</td>
+                            <td style="${TD}">${amtCell(acc.CreditLimit)}</td>
+                            <td style="${TD}">${amtCell(acc.SanctionedAmount)}</td>
+                            <td style="${TD}">${amtCell(acc.HighCredit)}</td>
+                            <td style="${TD}font-weight:600;">${amtCell(acc.CurrentBalance)}</td>
+                            <td style="${TD}">${amtCell(acc.AmountOverdue, true)}</td>
+                            <td style="${TD}${isClosed ? '' : 'color:var(--brand-green);font-weight:600;'}">${acc.EMI > 0 ? '₹'+acc.EMI.toLocaleString('en-IN') : '<span style="color:rgba(255,255,255,0.25);">—</span>'}</td>
+                            <td style="${TD}">${acc.DateOpened || '-'}</td>
+                            <td style="${TD}color:rgba(255,255,255,0.5);">${acc.DateClosed || '—'}</td>
+                            <td style="${TD}">${statusBadge(acc.PaymentStatus || '-', cls)}</td>
+                            <td style="${TD_LAST}line-height:1.8;">${renderPaymentHistory(acc.PaymentHistory)}</td>
                         </tr>`;
                     });
-                    if (!allHtml) allHtml = `<tr><td colspan="14" style="padding:20px;text-align:center;">No accounts found</td></tr>`;
+                    if (!allHtml) allHtml = `<tr><td colspan="14" style="padding:24px;text-align:center;color:rgba(255,255,255,0.4);">No accounts found</td></tr>`;
                     document.getElementById("cibil-all-table-body").innerHTML = allHtml;
 
                     // Enquiries table — now includes LoanType and Amount
@@ -2773,16 +2856,17 @@ if (dropZone && fileInput) {
                     let inqHtml = '';
                     const enquiries = summary.recent_enquiries || [];
                     enquiries.forEach((inq, idx) => {
-                        const amt = (inq.Amount || 0) > 0 ? `₹${(inq.Amount).toLocaleString('en-IN')}` : '-';
-                        inqHtml += `<tr style="border-bottom:1px solid var(--border-glass);">
-                            <td style="padding:10px;font-size:13px;">${idx + 1}</td>
-                            <td style="padding:10px;font-size:13px;white-space:nowrap;">${inq.Date || '-'}</td>
-                            <td style="padding:10px;font-size:13px;">${inq.Institution || '-'}</td>
-                            <td style="padding:10px;font-size:13px;">${inq.LoanType || '-'}</td>
-                            <td style="padding:10px;font-size:13px;">${amt}</td>
+                        const amt = (inq.Amount || 0) > 0 ? `₹${(inq.Amount).toLocaleString('en-IN')}` : '<span style="color:rgba(255,255,255,0.3);">—</span>';
+                        const rowBg = idx % 2 === 1 ? 'background:rgba(255,255,255,0.03);' : '';
+                        inqHtml += `<tr style="${rowBg}border-bottom:1px solid rgba(255,255,255,0.06);border-left:3px solid rgba(243,167,18,0.5);">
+                            <td style="${TD}width:40px;color:rgba(255,255,255,0.4);">${idx + 1}</td>
+                            <td style="${TD}font-family:monospace;">${inq.Date || '-'}</td>
+                            <td style="${TD}font-weight:600;">${inq.Institution || '-'}</td>
+                            <td style="${TD}"><span style="background:rgba(243,167,18,0.12);color:#F3A712;padding:2px 8px;border-radius:10px;font-size:12px;">${inq.LoanType || '-'}</span></td>
+                            <td style="${TD}">${amt}</td>
                         </tr>`;
                     });
-                    if (!inqHtml) inqHtml = `<tr><td colspan="5" style="padding:20px;text-align:center;">No recent enquiries found</td></tr>`;
+                    if (!inqHtml) inqHtml = `<tr><td colspan="5" style="padding:24px;text-align:center;color:rgba(255,255,255,0.4);">No recent enquiries found</td></tr>`;
                     document.getElementById("cibil-inquiries-table-body").innerHTML = inqHtml;
 
                     // Sync to CRM
@@ -2800,8 +2884,8 @@ if (dropZone && fileInput) {
                     </button>`;
             })
             .catch(err => {
-                console.error("CIBIL upload error:", err);
-                dropZone.innerHTML = `<i class="fa-solid fa-triangle-exclamation text-red" style="font-size:24px; margin-bottom:10px;"></i><h4>Network Error</h4><p>Backend server chal nahi raha. Terminal mein <strong>cd backend && python3 server.py</strong> run karo.</p>`;
+                console.error("CIBIL overall error:", err);
+                dropZone.innerHTML = `<i class="fa-solid fa-triangle-exclamation text-red" style="font-size:24px; margin-bottom:10px;"></i><h4>Unexpected Error</h4><p>An error occurred.</p>`;
             });
         }
     });
