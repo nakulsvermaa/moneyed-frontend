@@ -1907,6 +1907,143 @@ function updateLogoForTheme(isDark) {
     });
 }
 
+// =========================================
+// LIVE MARKET TRENDS CHART
+// =========================================
+let liveTrendsChartInstance = null;
+
+function initLiveTrendsChart() {
+    const ctx = document.getElementById('liveTrendsChart');
+    if (!ctx) return;
+
+    // Configure dataset
+    const loanTypes = [
+        { label: 'Personal Loan', color: '#18C979' },
+        { label: 'Home Loan', color: '#007AFF' },
+        { label: 'Auto Loan', color: '#FF9500' },
+        { label: 'Two Wheeler Loan', color: '#FF2D55' },
+        { label: 'Gold Loan', color: '#FFCC00' },
+        { label: 'Short Term Loan', color: '#5856D6' },
+        { label: 'App Loan', color: '#FF3B30' },
+        { label: 'Loan Against Property', color: '#AF52DE' },
+        { label: 'Loan against Credit Card', color: '#34C759' }
+    ];
+
+    // Generate initial 24 points (1 point per hour simulation)
+    const initialLabels = Array.from({length: 24}, (_, i) => `T-${24-i}h`);
+    
+    const datasets = loanTypes.map(loan => {
+        // Generate random base trend data
+        let baseValue = 50 + Math.random() * 30;
+        let data = [];
+        for (let i = 0; i < 24; i++) {
+            baseValue = baseValue + (Math.random() * 10 - 5);
+            if(baseValue < 10) baseValue = 10;
+            if(baseValue > 100) baseValue = 100;
+            data.push(baseValue);
+        }
+        
+        return {
+            label: loan.label,
+            data: data,
+            borderColor: loan.color,
+            backgroundColor: 'transparent',
+            borderWidth: 2,
+            tension: 0.4,
+            pointRadius: 0,
+            pointHoverRadius: 4,
+            borderDash: loan.label === 'Personal Loan' || loan.label === 'Home Loan' ? [] : [5, 5] // Differentiate lines
+        };
+    });
+
+    const isDark = document.body.classList.contains('theme-dark');
+    const gridColor = isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)';
+    const textColor = isDark ? 'rgba(255, 255, 255, 0.5)' : 'rgba(0, 0, 0, 0.5)';
+
+    liveTrendsChartInstance = new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: initialLabels,
+            datasets: datasets
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            animation: {
+                duration: 800,
+                easing: 'linear'
+            },
+            interaction: {
+                mode: 'index',
+                intersect: false,
+            },
+            plugins: {
+                legend: {
+                    position: 'top',
+                    labels: {
+                        color: textColor,
+                        usePointStyle: true,
+                        boxWidth: 8,
+                        font: { size: 10 }
+                    }
+                },
+                tooltip: {
+                    mode: 'index',
+                    intersect: false,
+                }
+            },
+            scales: {
+                x: {
+                    grid: { display: false },
+                    ticks: { color: textColor, maxTicksLimit: 8 }
+                },
+                y: {
+                    grid: { color: gridColor },
+                    ticks: { color: textColor, display: false },
+                    min: 0,
+                    max: 110
+                }
+            }
+        }
+    });
+
+    // Simulate Live Updates
+    setInterval(() => {
+        if(!liveTrendsChartInstance) return;
+        
+        // Push new label
+        const now = new Date();
+        liveTrendsChartInstance.data.labels.push(`${now.getHours()}:${now.getMinutes().toString().padStart(2, '0')}`);
+        liveTrendsChartInstance.data.labels.shift();
+
+        // Push new data points
+        liveTrendsChartInstance.data.datasets.forEach(dataset => {
+            let lastVal = dataset.data[dataset.data.length - 1];
+            let newVal = lastVal + (Math.random() * 8 - 4);
+            if(newVal < 10) newVal = 10;
+            if(newVal > 100) newVal = 100;
+            dataset.data.push(newVal);
+            dataset.data.shift();
+        });
+
+        liveTrendsChartInstance.update('none'); // Update without animation so it looks like a continuous stream
+    }, 3000);
+}
+
+function updateLiveTrendsChartTheme(isDark) {
+    if (!liveTrendsChartInstance) return;
+    const gridColor = isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)';
+    const textColor = isDark ? 'rgba(255, 255, 255, 0.7)' : 'rgba(0, 0, 0, 0.7)';
+    
+    liveTrendsChartInstance.options.plugins.legend.labels.color = textColor;
+    liveTrendsChartInstance.options.scales.x.ticks.color = textColor;
+    liveTrendsChartInstance.options.scales.y.grid.color = gridColor;
+    liveTrendsChartInstance.update();
+}
+
+// =========================================
+// THEME MANAGEMENT
+// =========================================
 function initTheme() {
     const savedTheme = localStorage.getItem('moneyed_theme') || 'light';
     if (savedTheme === 'dark') {
@@ -1936,6 +2073,7 @@ function toggleTheme() {
         document.getElementById('theme-toggle-btn').innerHTML = '<i class="fa-solid fa-moon"></i>';
     }
     updateLogoForTheme(isDark);
+    updateLiveTrendsChartTheme(isDark);
 }
 
 
@@ -1944,6 +2082,9 @@ function toggleTheme() {
 // PREMIUM ANIMATIONS & MICRO-INTERACTIONS
 // =========================================
 document.addEventListener("DOMContentLoaded", () => {
+    // Initialize Live Trends Chart
+    initLiveTrendsChart();
+
     // 1. Setup Scroll-Triggered Reveal Animations
     // Dynamically add the 'reveal' class to all premium cards
     const revealElements = document.querySelectorAll('.glass-card, .metric-card, .trust-card, .feature-highlights, .main-form-card');
@@ -2424,6 +2565,22 @@ if (mobileSelect) {
     });
 }
 
+// Payment history renderer — highlights bad DPD tokens in light red
+function renderPaymentHistory(history) {
+    if (!history || history === '-' || history === 'N/A') return '<span style="color:#888;">—</span>';
+    const BAD = /^(?!000$|STD$)[0-9]{3}$|^(?:DBT|SMA|LSS|SUB|WO|SET|XXX|#{1,3})$/i;
+    const GOOD = /^(?:STD|000)$/i;
+    return history.split(/\s+/).map(tok => {
+        if (BAD.test(tok)) {
+            return `<span style="background:#FFD0D0;color:#C0392B;padding:1px 5px;border-radius:3px;font-weight:700;margin:1px;">${tok}</span>`;
+        }
+        if (GOOD.test(tok)) {
+            return `<span style="color:#1A7A4A;">${tok}</span>`;
+        }
+        return `<span style="color:#aaa;">${tok}</span>`;
+    }).join(' ');
+}
+
 // Task 3: CIBIL PDF Upload
 const dropZone = document.getElementById("cibil-drop-zone");
 const fileInput = document.getElementById("cibil-file-input");
@@ -2435,6 +2592,16 @@ if (dropZone && fileInput) {
         if (e.target.files.length > 0) {
             const file = e.target.files[0];
             dropZone.innerHTML = `<i class="fa-solid fa-circle-notch fa-spin"></i><h4>Parsing ${file.name}...</h4><p>Extracting data using DPDP compliant OCR...</p>`;
+            
+            // Show loading pane on the right side
+            const placeholder = document.getElementById("cibil-placeholder");
+            const loadingPane = document.getElementById("cibil-loading-pane");
+            const resultsPane = document.getElementById("cibil-results-pane");
+            
+            if (placeholder) placeholder.style.display = "none";
+            if (resultsPane) resultsPane.style.display = "none";
+            if (loadingPane) loadingPane.style.display = "block";
+            
             const formData = new FormData();
             formData.append('file', file);
 
@@ -2449,6 +2616,8 @@ if (dropZone && fileInput) {
             .then(data => {
                 if(data.error) {
                     dropZone.innerHTML = `<i class="fa-solid fa-triangle-exclamation text-red" style="font-size:24px; margin-bottom:10px;"></i><h4>Parsing Failed</h4><p>${data.error}</p>`;
+                    if (loadingPane) loadingPane.style.display = "none";
+                    if (placeholder) placeholder.style.display = "block";
                     return;
                 }
 
@@ -2463,6 +2632,10 @@ if (dropZone && fileInput) {
 
                 if (parsedGrid) {
                     parsedGrid.style.display = "block";
+                    
+                    // Show results pane on the right
+                    if (loadingPane) loadingPane.style.display = "none";
+                    if (resultsPane) resultsPane.style.display = "block";
 
                     userProfile.cibil = data.score;
                     applyCibilTheme(data.score);
@@ -2553,7 +2726,7 @@ if (dropZone && fileInput) {
                             <td style="padding:10px;font-size:13px;white-space:nowrap;color:var(--brand-green);">${acc.EMI > 0 ? '₹'+acc.EMI.toLocaleString('en-IN') : '-'}</td>
                             <td style="padding:10px;font-size:13px;white-space:nowrap;">${acc.DateOpened || '-'}</td>
                             <td style="padding:10px;font-size:13px;white-space:nowrap;color:var(--brand-green);">${acc.PaymentStatus || 'Active'}</td>
-                            <td style="padding:10px;font-size:12px;max-width:220px;word-break:break-all;font-family:monospace;">${acc.PaymentHistory || '-'}</td>
+                            <td style="padding:10px;font-size:12px;max-width:240px;word-break:break-all;line-height:1.7;">${renderPaymentHistory(acc.PaymentHistory)}</td>
                         </tr>`;
                     });
                     if (!activeHtml) activeHtml = `<tr><td colspan="13" style="padding:20px;text-align:center;">No active accounts found</td></tr>`;
@@ -2581,7 +2754,7 @@ if (dropZone && fileInput) {
                             <td style="padding:10px;font-size:13px;white-space:nowrap;">${acc.DateOpened || '-'}</td>
                             <td style="padding:10px;font-size:13px;white-space:nowrap;">${acc.DateClosed || '-'}</td>
                             <td style="padding:10px;font-size:13px;white-space:nowrap;color:${statusColor};">${acc.PaymentStatus || '-'}</td>
-                            <td style="padding:10px;font-size:12px;max-width:220px;word-break:break-all;font-family:monospace;">${acc.PaymentHistory || '-'}</td>
+                            <td style="padding:10px;font-size:12px;max-width:240px;word-break:break-all;line-height:1.7;">${renderPaymentHistory(acc.PaymentHistory)}</td>
                         </tr>`;
                     });
                     if (!allHtml) allHtml = `<tr><td colspan="14" style="padding:20px;text-align:center;">No accounts found</td></tr>`;
