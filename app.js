@@ -2565,6 +2565,120 @@ if (mobileSelect) {
     });
 }
 
+// ── CIBIL Gamification Helpers ─────────────────────────────────────────────
+
+function animateCounter(el, target, duration) {
+    const start = performance.now();
+    const from = 0;
+    function step(now) {
+        const p = Math.min((now - start) / duration, 1);
+        const ease = 1 - Math.pow(1 - p, 3); // ease-out cubic
+        el.textContent = Math.round(from + (target - from) * ease);
+        if (p < 1) requestAnimationFrame(step);
+        else el.textContent = target;
+    }
+    requestAnimationFrame(step);
+}
+
+function scoreLabel(score) {
+    if (score >= 800) return { label: '🏆 Super Prime',   color: '#18C979' };
+    if (score >= 750) return { label: '⭐ Prime',          color: '#18C979' };
+    if (score >= 700) return { label: '✅ Near Prime',     color: '#F3A712' };
+    if (score >= 650) return { label: '⚠️ Sub-Prime',      color: '#F3A712' };
+    if (score >= 300) return { label: '🔴 Poor',           color: '#dc3545' };
+    return               { label: '❓ No Score',           color: '#888'    };
+}
+
+function buildScoreGauge(score, color) {
+    const pct = Math.max(0, Math.min(1, (score - 300) / 600));
+    const angle = -140 + pct * 280;   // -140° to +140°
+    const r = 54, cx = 70, cy = 72;
+    function arcPt(deg) {
+        const rad = (deg - 90) * Math.PI / 180;
+        return { x: cx + r * Math.cos(rad), y: cy + r * Math.sin(rad) };
+    }
+    const s = arcPt(-140), e = arcPt(angle), bg_e = arcPt(140);
+    const la = pct > 0.5 ? 1 : 0, la_bg = 1;
+    const trackPath = `M ${arcPt(-140).x} ${arcPt(-140).y} A ${r} ${r} 0 ${la_bg} 1 ${bg_e.x} ${bg_e.y}`;
+    const fillPath  = pct > 0 ? `M ${s.x} ${s.y} A ${r} ${r} 0 ${la} 1 ${e.x} ${e.y}` : '';
+    return `<svg viewBox="0 0 140 90" width="140" height="90" style="display:block;margin:0 auto 4px;">
+        <path d="${trackPath}" fill="none" stroke="rgba(255,255,255,0.08)" stroke-width="10" stroke-linecap="round"/>
+        ${fillPath ? `<path d="${fillPath}" fill="none" stroke="${color}" stroke-width="10" stroke-linecap="round"
+            style="filter:drop-shadow(0 0 6px ${color}88);">
+            <animate attributeName="stroke-dasharray"
+                from="0 1000" to="1000 0" dur="1.2s" fill="freeze" calcMode="spline"
+                keySplines="0.4 0 0.2 1"/>
+        </path>` : ''}
+        <text x="70" y="68" text-anchor="middle" font-size="22" font-weight="700" fill="${color}" id="cibil-gauge-score">-</text>
+        <text x="70" y="80" text-anchor="middle" font-size="8" fill="rgba(255,255,255,0.4)">out of 900</text>
+    </svg>`;
+}
+
+function launchConfetti(count) {
+    const colors = ['#18C979','#F3A712','#4FC3F7','#CE93D8','#FFAB40','#80CBC4'];
+    for (let i = 0; i < count; i++) {
+        const el = document.createElement('div');
+        const color = colors[Math.floor(Math.random() * colors.length)];
+        const size = 6 + Math.random() * 8;
+        el.style.cssText = `position:fixed;left:${10+Math.random()*80}%;top:-10px;width:${size}px;height:${size}px;
+            background:${color};border-radius:${Math.random()>0.5?'50%':'2px'};z-index:99999;pointer-events:none;
+            animation:confettiFall ${1.5+Math.random()*2}s ease-in forwards;
+            animation-delay:${Math.random()*0.8}s;transform:rotate(${Math.random()*360}deg);`;
+        document.body.appendChild(el);
+        setTimeout(() => el.remove(), 3500);
+    }
+    if (!document.getElementById('confetti-style')) {
+        const s = document.createElement('style');
+        s.id = 'confetti-style';
+        s.textContent = `@keyframes confettiFall{to{transform:translateY(110vh) rotate(720deg);opacity:0;}}`;
+        document.head.appendChild(s);
+    }
+}
+
+function showCibilAchievement(score) {
+    const { label, color } = scoreLabel(score);
+    const el = document.createElement('div');
+    el.style.cssText = `position:fixed;top:80px;right:24px;z-index:99998;
+        background:linear-gradient(135deg,rgba(20,20,30,0.97),rgba(30,30,45,0.97));
+        border:1px solid ${color};border-radius:16px;padding:16px 20px;
+        box-shadow:0 8px 32px rgba(0,0,0,0.5),0 0 0 1px ${color}22;
+        transform:translateX(120%);transition:transform 0.5s cubic-bezier(0.34,1.56,0.64,1);
+        min-width:220px;`;
+    el.innerHTML = `<div style="font-size:11px;letter-spacing:2px;color:rgba(255,255,255,0.4);margin-bottom:6px;">ACHIEVEMENT UNLOCKED</div>
+        <div style="font-size:18px;font-weight:700;color:${color};margin-bottom:2px;">${label}</div>
+        <div style="font-size:12px;color:rgba(255,255,255,0.5);">CIBIL Score: ${score}</div>
+        <div style="position:absolute;top:12px;right:12px;font-size:20px;opacity:0.15;">🏅</div>`;
+    document.body.appendChild(el);
+    requestAnimationFrame(() => { el.style.transform = 'translateX(0)'; });
+    setTimeout(() => { el.style.transform = 'translateX(120%)'; setTimeout(() => el.remove(), 600); }, 4000);
+}
+
+function buildRiskSummary(accounts, metrics) {
+    const badDPD  = /^(?!000$|STD$)[0-9]{3}$|^(?:DBT|SMA|LSS|SUB|XXX)$/i;
+    const settled = /^(?:WO|SET)$/i;
+    let flags = [];
+    accounts.forEach(a => {
+        const hist = (a.PaymentHistory||'').split(/\s+/);
+        if (hist.some(t => settled.test(t)) || /written.?off|settled/i.test(a.PaymentStatus))
+            flags.push({ type:'danger', msg:`${a.AccountType} — Written Off / Settled` });
+        else if (hist.some(t => badDPD.test(t)) || a.AmountOverdue > 0)
+            flags.push({ type:'warn', msg:`${a.AccountType} — DPD / Overdue detected` });
+    });
+    if (!flags.length) return '';
+    const items = flags.slice(0,5).map(f =>
+        `<div style="display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid rgba(255,255,255,0.05);">
+            <span style="font-size:14px;">${f.type==='danger'?'🔴':'🟡'}</span>
+            <span style="font-size:12px;color:rgba(255,255,255,0.75);">${f.msg}</span>
+        </div>`).join('');
+    return `<div style="background:rgba(243,167,18,0.07);border:1px solid rgba(243,167,18,0.25);border-radius:12px;padding:14px 16px;margin-bottom:16px;">
+        <div style="font-size:13px;font-weight:700;color:#F3A712;margin-bottom:8px;">
+            ⚠️ ${flags.length} Risk Flag${flags.length>1?'s':''} Detected
+        </div>
+        ${items}
+        ${flags.length>5?`<div style="font-size:11px;color:rgba(255,255,255,0.4);margin-top:6px;">+${flags.length-5} more…</div>`:''}
+    </div>`;
+}
+
 // Payment history renderer — highlights bad DPD tokens in light red
 function renderPaymentHistory(history) {
     if (!history || history === '-' || history === 'N/A') return '<span style="color:#888;">—</span>';
@@ -2686,69 +2800,113 @@ if (dropZone && fileInput) {
                     document.getElementById("home-cibil-val").textContent = data.score || '---';
 
                     const scoreColor = data.score >= 750 ? '#18C979' : data.score >= 700 ? '#F3A712' : '#dc3545';
+                    const { label: scoreTag } = scoreLabel(data.score);
+                    const overdueColor = summary.total_overdue > 0 ? '#F3A712' : 'inherit';
 
+                    // Score gauge card + stat boxes
                     document.getElementById("cibil-summary-grid").innerHTML = `
-                        <div class="cibil-stat-box score-box" style="border-left: 3px solid ${scoreColor};">
-                            <p>CIBIL Score</p>
-                            <h3 style="color:${scoreColor}; font-size:2rem;">${data.score || 'N/A'}</h3>
+                        <!-- Score Gauge Card — spans 2 rows on wider screens -->
+                        <div class="cibil-stat-box score-box" style="grid-row:span 2;border:1px solid ${scoreColor}33;
+                            background:linear-gradient(135deg,rgba(0,0,0,0.3),rgba(20,20,30,0.6));
+                            display:flex;flex-direction:column;align-items:center;justify-content:center;padding:20px 12px;">
+                            ${buildScoreGauge(data.score, scoreColor)}
+                            <div style="font-size:11px;letter-spacing:2px;color:rgba(255,255,255,0.35);margin-bottom:4px;">CREDIT SCORE</div>
+                            <div style="font-size:11px;font-weight:600;color:${scoreColor};background:${scoreColor}18;
+                                padding:3px 10px;border-radius:20px;border:1px solid ${scoreColor}44;">${scoreTag}</div>
                         </div>
-                        <div class="cibil-stat-box">
-                            <p>Name</p>
-                            <h3 style="font-size:13px;">${summary.name || 'N/A'}</h3>
+
+                        <div class="cibil-stat-box" style="animation:fadeSlideIn 0.4s ease both 0.1s;">
+                            <p style="font-size:11px;letter-spacing:1px;">👤 NAME</p>
+                            <h3 style="font-size:13px;margin:0;">${summary.name || 'N/A'}</h3>
                         </div>
-                        <div class="cibil-stat-box">
-                            <p>PAN</p>
-                            <h3 style="font-size:13px;">${summary.pan || 'N/A'}</h3>
+                        <div class="cibil-stat-box" style="animation:fadeSlideIn 0.4s ease both 0.15s;">
+                            <p style="font-size:11px;letter-spacing:1px;">🪪 PAN</p>
+                            <h3 style="font-size:13px;margin:0;font-family:monospace;">${summary.pan || 'N/A'}</h3>
                         </div>
-                        <div class="cibil-stat-box">
-                            <p>Date of Birth</p>
-                            <h3 style="font-size:13px;">${summary.dob || 'N/A'}</h3>
+                        <div class="cibil-stat-box" style="animation:fadeSlideIn 0.4s ease both 0.2s;">
+                            <p style="font-size:11px;letter-spacing:1px;">🎂 DATE OF BIRTH</p>
+                            <h3 style="font-size:13px;margin:0;">${summary.dob || 'N/A'}</h3>
                         </div>
-                        <div class="cibil-stat-box">
-                            <p>Mobile</p>
-                            <h3 style="font-size:13px;">${summary.mobile || 'N/A'}</h3>
+                        <div class="cibil-stat-box" style="animation:fadeSlideIn 0.4s ease both 0.25s;">
+                            <p style="font-size:11px;letter-spacing:1px;">📱 MOBILE</p>
+                            <h3 style="font-size:13px;margin:0;">${summary.mobile || 'N/A'}</h3>
                         </div>
-                        <div class="cibil-stat-box">
-                            <p>Gender</p>
-                            <h3 style="font-size:13px;">${summary.gender || 'N/A'}</h3>
+
+                        <div class="cibil-stat-box" style="border-color:${scoreColor}44;animation:fadeSlideIn 0.4s ease both 0.3s;">
+                            <p style="font-size:11px;letter-spacing:1px;">🟢 ACTIVE ACCOUNTS</p>
+                            <h3 id="anim-active" style="font-size:1.8rem;margin:0;color:${scoreColor};">0</h3>
                         </div>
-                        <div class="cibil-stat-box warning-box">
-                            <p>Active Accounts</p>
-                            <h3>${metrics.active_count || summary.active_accounts || '0'}</h3>
+                        <div class="cibil-stat-box" style="animation:fadeSlideIn 0.4s ease both 0.35s;">
+                            <p style="font-size:11px;letter-spacing:1px;">✅ CLOSED ACCOUNTS</p>
+                            <h3 id="anim-closed" style="font-size:1.8rem;margin:0;">0</h3>
                         </div>
-                        <div class="cibil-stat-box">
-                            <p>Closed Accounts</p>
-                            <h3>${metrics.closed_count || summary.closed_accounts || '0'}</h3>
+                        <div class="cibil-stat-box" style="border-color:#F3A71244;animation:fadeSlideIn 0.4s ease both 0.4s;">
+                            <p style="font-size:11px;letter-spacing:1px;">🔍 ENQUIRIES (90d)</p>
+                            <h3 id="anim-enq" style="font-size:1.8rem;margin:0;color:${(summary.enquiries_90d||0)>3?'#F3A712':'inherit'};">0</h3>
                         </div>
-                        <div class="cibil-stat-box danger-box">
-                            <p>Enquiries (90d)</p>
-                            <h3>${summary.enquiries_90d || '0'}</h3>
+
+                        <div class="cibil-stat-box" style="animation:fadeSlideIn 0.4s ease both 0.45s;">
+                            <p style="font-size:11px;letter-spacing:1px;">💰 TOTAL OUTSTANDING</p>
+                            <h3 style="font-size:12px;margin:0;">₹${(summary.total_outstanding||0).toLocaleString('en-IN')}</h3>
                         </div>
-                        <div class="cibil-stat-box">
-                            <p>Total Outstanding</p>
-                            <h3 style="font-size:13px;">₹${(summary.total_outstanding||0).toLocaleString('en-IN')}</h3>
+                        <div class="cibil-stat-box" style="border-color:${summary.total_overdue>0?'#F3A71244':'transparent'};animation:fadeSlideIn 0.4s ease both 0.5s;">
+                            <p style="font-size:11px;letter-spacing:1px;">⚠️ TOTAL OVERDUE</p>
+                            <h3 style="font-size:12px;margin:0;color:${overdueColor};">₹${(summary.total_overdue||0).toLocaleString('en-IN')}</h3>
                         </div>
-                        <div class="cibil-stat-box">
-                            <p>Total Overdue</p>
-                            <h3 style="font-size:13px; color:${summary.total_overdue > 0 ? '#dc3545' : 'inherit'};">₹${(summary.total_overdue||0).toLocaleString('en-IN')}</h3>
+                        <div class="cibil-stat-box" style="animation:fadeSlideIn 0.4s ease both 0.55s;">
+                            <p style="font-size:11px;letter-spacing:1px;">📆 ACTIVE EMI / MO</p>
+                            <h3 style="font-size:12px;margin:0;">₹${(metrics.total_emi||0).toLocaleString('en-IN')}</h3>
                         </div>
-                        <div class="cibil-stat-box">
-                            <p>Total Active EMI</p>
-                            <h3 style="font-size:13px;">₹${(metrics.total_emi||0).toLocaleString('en-IN')}</h3>
+                        <div class="cibil-stat-box" style="animation:fadeSlideIn 0.4s ease both 0.6s;">
+                            <p style="font-size:11px;letter-spacing:1px;">💳 CC UTILIZATION</p>
+                            <h3 style="font-size:13px;margin:0;">${metrics.cc_utilization || 'N/A'}</h3>
                         </div>
-                        <div class="cibil-stat-box">
-                            <p>CC Utilization</p>
-                            <h3 style="font-size:13px;">${metrics.cc_utilization || 'N/A'}</h3>
+                        <div class="cibil-stat-box" style="animation:fadeSlideIn 0.4s ease both 0.65s;">
+                            <p style="font-size:11px;letter-spacing:1px;">📅 OLDEST ACCOUNT</p>
+                            <h3 style="font-size:12px;margin:0;">${metrics.oldest_account || 'N/A'}</h3>
                         </div>
-                        <div class="cibil-stat-box">
-                            <p>Oldest Account</p>
-                            <h3 style="font-size:13px;">${metrics.oldest_account || 'N/A'}</h3>
-                        </div>
-                        <div class="cibil-stat-box">
-                            <p>Report Date</p>
-                            <h3 style="font-size:13px;">${summary.report_date || 'N/A'}</h3>
+                        <div class="cibil-stat-box" style="animation:fadeSlideIn 0.4s ease both 0.7s;">
+                            <p style="font-size:11px;letter-spacing:1px;">📋 REPORT DATE</p>
+                            <h3 style="font-size:12px;margin:0;">${summary.report_date || 'N/A'}</h3>
                         </div>
                     `;
+
+                    // Inject keyframes once
+                    if (!document.getElementById('cibil-anim-style')) {
+                        const s = document.createElement('style'); s.id = 'cibil-anim-style';
+                        s.textContent = `
+                            @keyframes fadeSlideIn{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
+                            .cibil-stat-box{transition:transform 0.2s,box-shadow 0.2s;}
+                            .cibil-stat-box:hover{transform:translateY(-2px);box-shadow:0 8px 24px rgba(0,0,0,0.3);}
+                        `;
+                        document.head.appendChild(s);
+                    }
+
+                    // Animate score gauge text
+                    const gaugeScoreEl = document.getElementById('cibil-gauge-score');
+                    if (gaugeScoreEl) animateCounter(gaugeScoreEl, data.score || 0, 1400);
+
+                    // Animate stat counters
+                    const animActive = document.getElementById('anim-active');
+                    const animClosed = document.getElementById('anim-closed');
+                    const animEnq    = document.getElementById('anim-enq');
+                    if (animActive) animateCounter(animActive, metrics.active_count || 0, 800);
+                    if (animClosed) animateCounter(animClosed, metrics.closed_count || 0, 900);
+                    if (animEnq)    animateCounter(animEnq,    summary.enquiries_90d || 0, 700);
+
+                    // Risk flags summary injected before first table
+                    const riskHtml = buildRiskSummary(accounts, metrics);
+                    const parsedRes = document.getElementById('cibil-parsed-results');
+                    let riskEl = document.getElementById('cibil-risk-flags');
+                    if (!riskEl) { riskEl = document.createElement('div'); riskEl.id = 'cibil-risk-flags'; parsedRes.prepend(riskEl); }
+                    riskEl.innerHTML = riskHtml;
+
+                    // Achievement + confetti
+                    setTimeout(() => {
+                        showCibilAchievement(data.score);
+                        if (data.score >= 750) launchConfetti(60);
+                        else if (data.score >= 700) launchConfetti(20);
+                    }, 800);
 
                     // ── Row classifier ──────────────────────────────────────
                     function classifyRow(acc) {
@@ -2878,10 +3036,20 @@ if (dropZone && fileInput) {
                     });
                 }
 
-                dropZone.innerHTML = `<i class="fa-solid fa-check text-green" style="font-size:24px; margin-bottom:10px;"></i><h4>Report Processed</h4><p>${file.name} parsed successfully. Download the full Excel report below.</p>
-                    <button onclick="downloadCibilExcel()" style="margin-top:12px; background:var(--brand-green); color:#fff; border:none; padding:10px 20px; border-radius:8px; cursor:pointer; font-size:14px; font-weight:600;">
-                        <i class="fa-solid fa-file-excel" style="margin-right:6px;"></i> Download 4-Sheet Excel Report
-                    </button>`;
+                dropZone.innerHTML = `
+                    <div style="text-align:center;">
+                        <div style="font-size:48px;margin-bottom:8px;">✅</div>
+                        <h4 style="margin:0 0 4px;color:var(--brand-green);">Report Parsed Successfully!</h4>
+                        <p style="font-size:13px;color:var(--text-muted);margin:0 0 16px;">${file.name}</p>
+                        <div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap;">
+                            <button onclick="event.stopPropagation();downloadCibilExcel()" style="background:var(--brand-green);color:#fff;border:none;padding:10px 20px;border-radius:8px;cursor:pointer;font-size:13px;font-weight:600;display:flex;align-items:center;gap:6px;">
+                                <i class="fa-solid fa-file-excel"></i> Download Excel Report
+                            </button>
+                            <button onclick="event.stopPropagation();fileInput.click()" style="background:rgba(255,255,255,0.08);color:var(--text-color);border:1px solid var(--border-glass);padding:10px 20px;border-radius:8px;cursor:pointer;font-size:13px;font-weight:600;display:flex;align-items:center;gap:6px;">
+                                <i class="fa-solid fa-rotate"></i> Upload Another
+                            </button>
+                        </div>
+                    </div>`;
             })
             .catch(err => {
                 console.error("CIBIL overall error:", err);
