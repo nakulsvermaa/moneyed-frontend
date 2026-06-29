@@ -2565,119 +2565,330 @@ if (mobileSelect) {
     });
 }
 
-// ── CIBIL Gamification Helpers ─────────────────────────────────────────────
+// ── CIBIL Credit Health Engine ────────────────────────────────────────────
 
 function animateCounter(el, target, duration) {
     const start = performance.now();
-    const from = 0;
     function step(now) {
         const p = Math.min((now - start) / duration, 1);
-        const ease = 1 - Math.pow(1 - p, 3); // ease-out cubic
-        el.textContent = Math.round(from + (target - from) * ease);
-        if (p < 1) requestAnimationFrame(step);
-        else el.textContent = target;
+        const ease = 1 - Math.pow(1 - p, 3);
+        el.textContent = Math.round(target * ease);
+        if (p < 1) requestAnimationFrame(step); else el.textContent = target;
     }
     requestAnimationFrame(step);
 }
 
 function scoreLabel(score) {
-    if (score >= 800) return { label: '🏆 Super Prime',   color: '#18C979' };
-    if (score >= 750) return { label: '⭐ Prime',          color: '#18C979' };
-    if (score >= 700) return { label: '✅ Near Prime',     color: '#F3A712' };
-    if (score >= 650) return { label: '⚠️ Sub-Prime',      color: '#F3A712' };
-    if (score >= 300) return { label: '🔴 Poor',           color: '#dc3545' };
-    return               { label: '❓ No Score',           color: '#888'    };
+    if (score >= 800) return { label:'Super Prime',  emoji:'🏆', color:'#18C979', bg:'rgba(24,201,121,0.12)' };
+    if (score >= 750) return { label:'Prime',         emoji:'⭐', color:'#18C979', bg:'rgba(24,201,121,0.08)' };
+    if (score >= 700) return { label:'Near Prime',    emoji:'✅', color:'#F3A712', bg:'rgba(243,167,18,0.10)' };
+    if (score >= 650) return { label:'Sub-Prime',     emoji:'⚠️', color:'#F3A712', bg:'rgba(243,167,18,0.08)' };
+    if (score >= 300) return { label:'Poor Credit',   emoji:'🔴', color:'#E05200', bg:'rgba(220,80,0,0.10)'   };
+    return                   { label:'No Score',      emoji:'❓', color:'#888',    bg:'rgba(128,128,128,0.08)' };
+}
+
+function _arcPoint(cx, cy, r, deg) {
+    const rad = (deg - 90) * Math.PI / 180;
+    return { x: cx + r * Math.cos(rad), y: cy + r * Math.sin(rad) };
 }
 
 function buildScoreGauge(score, color) {
     const pct = Math.max(0, Math.min(1, (score - 300) / 600));
-    const angle = -140 + pct * 280;   // -140° to +140°
-    const r = 54, cx = 70, cy = 72;
-    function arcPt(deg) {
-        const rad = (deg - 90) * Math.PI / 180;
-        return { x: cx + r * Math.cos(rad), y: cy + r * Math.sin(rad) };
-    }
-    const s = arcPt(-140), e = arcPt(angle), bg_e = arcPt(140);
-    const la = pct > 0.5 ? 1 : 0, la_bg = 1;
-    const trackPath = `M ${arcPt(-140).x} ${arcPt(-140).y} A ${r} ${r} 0 ${la_bg} 1 ${bg_e.x} ${bg_e.y}`;
-    const fillPath  = pct > 0 ? `M ${s.x} ${s.y} A ${r} ${r} 0 ${la} 1 ${e.x} ${e.y}` : '';
-    return `<svg viewBox="0 0 140 90" width="140" height="90" style="display:block;margin:0 auto 4px;">
-        <path d="${trackPath}" fill="none" stroke="rgba(255,255,255,0.08)" stroke-width="10" stroke-linecap="round"/>
-        ${fillPath ? `<path d="${fillPath}" fill="none" stroke="${color}" stroke-width="10" stroke-linecap="round"
-            style="filter:drop-shadow(0 0 6px ${color}88);">
-            <animate attributeName="stroke-dasharray"
-                from="0 1000" to="1000 0" dur="1.2s" fill="freeze" calcMode="spline"
-                keySplines="0.4 0 0.2 1"/>
+    const cx = 80, cy = 82, r = 60;
+    const startDeg = -140, endDeg = 140;
+    const angleFill = startDeg + pct * (endDeg - startDeg);
+    const s = _arcPoint(cx, cy, r, startDeg);
+    const e = _arcPoint(cx, cy, r, angleFill);
+    const bgE = _arcPoint(cx, cy, r, endDeg);
+    const la = pct > 0.5 ? 1 : 0;
+    const circumf = Math.round(pct * 295);
+    return `<svg viewBox="0 0 160 100" width="160" height="100" style="display:block;overflow:visible;">
+        <defs>
+            <linearGradient id="gaugeGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+                <stop offset="0%" stop-color="${color}99"/>
+                <stop offset="100%" stop-color="${color}"/>
+            </linearGradient>
+            <filter id="gaugeGlow"><feGaussianBlur stdDeviation="3" result="blur"/><feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+        </defs>
+        <path d="M ${s.x} ${s.y} A ${r} ${r} 0 1 1 ${bgE.x} ${bgE.y}" fill="none" stroke="rgba(255,255,255,0.07)" stroke-width="9" stroke-linecap="round"/>
+        ${pct > 0 ? `<path d="M ${s.x} ${s.y} A ${r} ${r} 0 ${la} 1 ${e.x} ${e.y}" fill="none" stroke="url(#gaugeGrad)" stroke-width="9" stroke-linecap="round" filter="url(#gaugeGlow)"
+            stroke-dasharray="${circumf} 1000" stroke-dashoffset="0">
+            <animate attributeName="stroke-dasharray" from="0 1000" to="${circumf} 1000" dur="1.4s" fill="freeze" calcMode="spline" keySplines="0.4 0 0.2 1"/>
         </path>` : ''}
-        <text x="70" y="68" text-anchor="middle" font-size="22" font-weight="700" fill="${color}" id="cibil-gauge-score">-</text>
-        <text x="70" y="80" text-anchor="middle" font-size="8" fill="rgba(255,255,255,0.4)">out of 900</text>
+        <text x="${cx}" y="${cy - 8}" text-anchor="middle" font-size="26" font-weight="800" fill="${color}" id="cibil-gauge-score" style="font-family:system-ui;">0</text>
+        <text x="${cx}" y="${cy + 8}" text-anchor="middle" font-size="9" fill="rgba(255,255,255,0.35)" style="font-family:system-ui;letter-spacing:1px;">OUT OF 900</text>
     </svg>`;
 }
 
-function launchConfetti(count) {
-    const colors = ['#18C979','#F3A712','#4FC3F7','#CE93D8','#FFAB40','#80CBC4'];
-    for (let i = 0; i < count; i++) {
-        const el = document.createElement('div');
-        const color = colors[Math.floor(Math.random() * colors.length)];
-        const size = 6 + Math.random() * 8;
-        el.style.cssText = `position:fixed;left:${10+Math.random()*80}%;top:-10px;width:${size}px;height:${size}px;
-            background:${color};border-radius:${Math.random()>0.5?'50%':'2px'};z-index:99999;pointer-events:none;
-            animation:confettiFall ${1.5+Math.random()*2}s ease-in forwards;
-            animation-delay:${Math.random()*0.8}s;transform:rotate(${Math.random()*360}deg);`;
-        document.body.appendChild(el);
-        setTimeout(() => el.remove(), 3500);
-    }
-    if (!document.getElementById('confetti-style')) {
-        const s = document.createElement('style');
-        s.id = 'confetti-style';
-        s.textContent = `@keyframes confettiFall{to{transform:translateY(110vh) rotate(720deg);opacity:0;}}`;
-        document.head.appendChild(s);
-    }
-}
+// Calculates pillar grades
+function calcPillars(score, accounts, metrics) {
+    const BAD = /^(?!000$|STD$)[0-9]{3}$|^(?:DBT|SMA|LSS|SUB|XXX)$/i;
+    const CRIT = /^(?:WO|SET|LSS|DBT)$/i;
 
-function showCibilAchievement(score) {
-    const { label, color } = scoreLabel(score);
-    const el = document.createElement('div');
-    el.style.cssText = `position:fixed;top:80px;right:24px;z-index:99998;
-        background:linear-gradient(135deg,rgba(20,20,30,0.97),rgba(30,30,45,0.97));
-        border:1px solid ${color};border-radius:16px;padding:16px 20px;
-        box-shadow:0 8px 32px rgba(0,0,0,0.5),0 0 0 1px ${color}22;
-        transform:translateX(120%);transition:transform 0.5s cubic-bezier(0.34,1.56,0.64,1);
-        min-width:220px;`;
-    el.innerHTML = `<div style="font-size:11px;letter-spacing:2px;color:rgba(255,255,255,0.4);margin-bottom:6px;">ACHIEVEMENT UNLOCKED</div>
-        <div style="font-size:18px;font-weight:700;color:${color};margin-bottom:2px;">${label}</div>
-        <div style="font-size:12px;color:rgba(255,255,255,0.5);">CIBIL Score: ${score}</div>
-        <div style="position:absolute;top:12px;right:12px;font-size:20px;opacity:0.15;">🏅</div>`;
-    document.body.appendChild(el);
-    requestAnimationFrame(() => { el.style.transform = 'translateX(0)'; });
-    setTimeout(() => { el.style.transform = 'translateX(120%)'; setTimeout(() => el.remove(), 600); }, 4000);
-}
-
-function buildRiskSummary(accounts, metrics) {
-    const badDPD  = /^(?!000$|STD$)[0-9]{3}$|^(?:DBT|SMA|LSS|SUB|XXX)$/i;
-    const settled = /^(?:WO|SET)$/i;
-    let flags = [];
+    // Payment History
+    let payScore = 100;
     accounts.forEach(a => {
         const hist = (a.PaymentHistory||'').split(/\s+/);
-        if (hist.some(t => settled.test(t)) || /written.?off|settled/i.test(a.PaymentStatus))
-            flags.push({ type:'danger', msg:`${a.AccountType} — Written Off / Settled` });
-        else if (hist.some(t => badDPD.test(t)) || a.AmountOverdue > 0)
-            flags.push({ type:'warn', msg:`${a.AccountType} — DPD / Overdue detected` });
+        if (hist.some(t => CRIT.test(t)) || /written.?off|settled/i.test(a.PaymentStatus)) payScore -= 40;
+        else if (hist.some(t => BAD.test(t)) || a.AmountOverdue > 0) payScore -= 20;
     });
-    if (!flags.length) return '';
-    const items = flags.slice(0,5).map(f =>
-        `<div style="display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid rgba(255,255,255,0.05);">
-            <span style="font-size:14px;">${f.type==='danger'?'🔴':'🟡'}</span>
-            <span style="font-size:12px;color:rgba(255,255,255,0.75);">${f.msg}</span>
+    payScore = Math.max(0, payScore);
+
+    // Utilization
+    const util = parseFloat(metrics.cc_utilization) || 0;
+    const utilScore = util === 0 ? 85 : util < 10 ? 100 : util < 30 ? 90 : util < 50 ? 70 : util < 75 ? 45 : 20;
+
+    // Credit Age
+    const oldest = metrics.oldest_account;
+    let ageYears = 0;
+    if (oldest && oldest !== 'N/A') {
+        const yr = oldest.match(/(\d{4})/);
+        if (yr) ageYears = new Date().getFullYear() - parseInt(yr[1]);
+    }
+    const ageScore = ageYears >= 10 ? 100 : ageYears >= 7 ? 90 : ageYears >= 5 ? 75 : ageYears >= 3 ? 55 : ageYears >= 1 ? 35 : 15;
+
+    // Enquiries
+    const enq = metrics.active_count >= 0 ? 0 : 0; // use from summary
+    const enqRaw = parseInt(metrics._enq || 0);
+    const enqScore = enqRaw === 0 ? 100 : enqRaw <= 2 ? 85 : enqRaw <= 4 ? 65 : enqRaw <= 7 ? 40 : 20;
+
+    function toGrade(s) {
+        if (s >= 90) return { g:'A+', c:'#18C979' };
+        if (s >= 75) return { g:'A',  c:'#18C979' };
+        if (s >= 60) return { g:'B',  c:'#4FC3F7' };
+        if (s >= 40) return { g:'C',  c:'#F3A712' };
+        if (s >= 20) return { g:'D',  c:'#E05200' };
+        return              { g:'F',  c:'#dc3545' };
+    }
+    return [
+        { label:'Payment History', icon:'💳', score:payScore,  ...toGrade(payScore),  desc: payScore>=90?'Excellent — no missed payments':'Has missed/late payments' },
+        { label:'CC Utilization',  icon:'📊', score:utilScore, ...toGrade(utilScore), desc: util===0?'No credit card on file': utilScore>=90?'Very low utilization — great!': util<30?'Good utilization (<30%)': util<50?'Moderate — try to reduce': 'High risk — pay down balance' },
+        { label:'Credit Age',      icon:'📅', score:ageScore,  ...toGrade(ageScore),  desc: ageYears===0?'Very new credit history': ageYears<3?`${ageYears}yr — building history`: ageYears<7?`${ageYears}yr — decent age`: `${ageYears}yr — strong history` },
+        { label:'Enquiries',       icon:'🔍', score:enqScore,  ...toGrade(enqScore),  desc: enqScore>=90?'Very few enquiries — ideal': enqScore>=65?'Moderate enquiries': 'Too many enquiries — caution' },
+    ];
+}
+
+// Main Credit Health Card
+function buildCreditHealthCard(score, name, accounts, metrics, summary) {
+    const { label, emoji, color, bg } = scoreLabel(score);
+    const pillars = calcPillars(score, accounts, metrics);
+    metrics._enq = summary.enquiries_90d || 0;
+
+    // Contextual message
+    let headline, subline, actionItems, positives;
+    const BAD_ACC = accounts.filter(a => {
+        const h = (a.PaymentHistory||'').split(/\s+/);
+        return h.some(t => /^(?!000$|STD$)[0-9]{3}$|^(?:WO|SET|DBT|LSS|SMA|SUB|XXX)$/i.test(t)) || a.AmountOverdue > 0;
+    });
+    const hasDPD = BAD_ACC.length > 0;
+    const hasSettled = accounts.some(a => /written.?off|settled/i.test(a.PaymentStatus) ||
+        (a.PaymentHistory||'').split(/\s+/).some(t => /^(?:WO|SET)$/i.test(t)));
+
+    if (score >= 750 && !hasDPD) {
+        headline = `${name ? name.split(' ')[0]+', your' : 'Your'} credit health is excellent`;
+        subline = `Score of ${score} puts you among India's top borrowers. Banks compete for your loan.`;
+        positives = ['✅ Eligible for lowest interest rates (as low as 8.5%)', '✅ Home loan up to ₹75L–₹1Cr likely approved', '✅ Instant personal loan pre-approval on most apps'];
+        actionItems = ['💡 Keep CC utilization below 30% to stay in this range', '💡 Avoid more than 2 loan enquiries in 6 months', '💡 Maintain at least 1 active credit card for mix'];
+    } else if (score >= 700 && !hasDPD) {
+        headline = `${name ? name.split(' ')[0]+', you are' : 'You are'} in a good position`;
+        subline = `Score of ${score} is good — most lenders will approve your loan with standard rates.`;
+        positives = ['✅ Personal & home loans largely approved', '✅ Most banks and NBFCs will consider your application', '✅ Good base — improving 50 points unlocks premium rates'];
+        actionItems = ['💡 Pay all EMIs on time for next 6 months to cross 750', '💡 Reduce outstanding balance on credit cards', '💡 Do not apply for too many loans simultaneously'];
+    } else if (hasDPD && !hasSettled) {
+        headline = `${name ? name.split(' ')[0]+', there are' : 'There are'} issues that need attention`;
+        subline = `Score of ${score} with ${BAD_ACC.length} account(s) showing late payments. This reduces loan approval chances.`;
+        positives = metrics.active_count > 0 ? [`✅ ${metrics.active_count} active account(s) still in good standing`] : [];
+        actionItems = [
+            '⚠️ Clear all overdue amounts immediately — this has the biggest impact',
+            '⚠️ Dispute any incorrect DPD entries with your bank in writing',
+            '⚠️ Avoid applying for new loans for 6 months — focus on clearing dues',
+            '💡 After clearing dues, score typically improves in 3–6 months',
+        ];
+    } else if (hasSettled) {
+        headline = `${name ? name.split(' ')[0]+', urgent' : 'Urgent'} credit repair needed`;
+        subline = `Written Off / Settled accounts are the most serious flags. Most banks will reject loan applications.`;
+        positives = [];
+        actionItems = [
+            '🔴 Contact the lender — negotiate to upgrade "Settled" to "Closed" (NOC letter)',
+            '🔴 Request the bank to remove the Written Off tag after full payment',
+            '⚠️ Score recovery typically takes 12–24 months after resolution',
+            '💡 Start a secured credit card (FD-backed) to rebuild credit history',
+        ];
+    } else {
+        headline = `${name ? name.split(' ')[0]+', your' : 'Your'} credit needs improvement`;
+        subline = `Score of ${score} — most traditional lenders may hesitate. NBFCs and digital lenders may still help.`;
+        positives = ['💡 The good news: credit scores can be improved with consistent effort'];
+        actionItems = ['💡 Pay every EMI and bill on time — this is the #1 factor', '💡 Get a secured credit card (FD-backed) and use it lightly', '💡 Check report for errors — wrong data can drag your score down'];
+    }
+
+    // Pillar cards
+    const pillarHtml = pillars.map(p => `
+        <div style="background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:12px;
+            padding:14px 12px;text-align:center;animation:fadeSlideIn 0.5s ease both;">
+            <div style="font-size:20px;margin-bottom:4px;">${p.icon}</div>
+            <div style="font-size:10px;color:rgba(255,255,255,0.45);letter-spacing:1px;margin-bottom:8px;">${p.label.toUpperCase()}</div>
+            <div style="font-size:28px;font-weight:800;color:${p.c};line-height:1;margin-bottom:6px;">${p.g}</div>
+            <div style="background:rgba(255,255,255,0.06);border-radius:20px;height:5px;overflow:hidden;margin-bottom:8px;">
+                <div style="height:100%;width:0;background:${p.c};border-radius:20px;transition:width 1.2s cubic-bezier(0.4,0,0.2,1);"
+                    data-width="${p.score}"></div>
+            </div>
+            <div style="font-size:10px;color:rgba(255,255,255,0.4);line-height:1.4;">${p.desc}</div>
         </div>`).join('');
-    return `<div style="background:rgba(243,167,18,0.07);border:1px solid rgba(243,167,18,0.25);border-radius:12px;padding:14px 16px;margin-bottom:16px;">
-        <div style="font-size:13px;font-weight:700;color:#F3A712;margin-bottom:8px;">
-            ⚠️ ${flags.length} Risk Flag${flags.length>1?'s':''} Detected
+
+    const posHtml = positives.map(t => `<div style="padding:7px 0;border-bottom:1px solid rgba(255,255,255,0.05);font-size:13px;color:rgba(255,255,255,0.8);">${t}</div>`).join('');
+    const actHtml = actionItems.map(t => `<div style="padding:7px 0;border-bottom:1px solid rgba(255,255,255,0.05);font-size:13px;color:rgba(255,255,255,0.8);">${t}</div>`).join('');
+
+    return `
+    <div id="cibil-health-card" style="background:linear-gradient(135deg,rgba(15,20,30,0.95),rgba(20,28,42,0.95));
+        border:1px solid ${color}30;border-radius:20px;overflow:hidden;margin-bottom:24px;
+        box-shadow:0 20px 60px rgba(0,0,0,0.4),0 0 0 1px ${color}15;">
+
+        <!-- Header Banner -->
+        <div style="background:linear-gradient(90deg,${color}18,transparent);border-bottom:1px solid ${color}20;
+            padding:20px 24px;display:flex;align-items:center;gap:16px;flex-wrap:wrap;">
+            <div style="font-size:36px;">${emoji}</div>
+            <div style="flex:1;min-width:200px;">
+                <div style="font-size:11px;letter-spacing:2px;color:${color};opacity:0.7;margin-bottom:3px;">CREDIT HEALTH REPORT</div>
+                <div style="font-size:17px;font-weight:700;color:#fff;line-height:1.3;">${headline}</div>
+                <div style="font-size:13px;color:rgba(255,255,255,0.5);margin-top:4px;">${subline}</div>
+            </div>
+            <div style="background:${bg};border:1px solid ${color}40;border-radius:12px;padding:10px 18px;text-align:center;min-width:90px;">
+                <div style="font-size:10px;color:${color};letter-spacing:1px;margin-bottom:2px;">CATEGORY</div>
+                <div style="font-size:16px;font-weight:800;color:${color};">${label}</div>
+            </div>
         </div>
-        ${items}
-        ${flags.length>5?`<div style="font-size:11px;color:rgba(255,255,255,0.4);margin-top:6px;">+${flags.length-5} more…</div>`:''}
+
+        <!-- Score Gauge + Identity -->
+        <div style="display:grid;grid-template-columns:180px 1fr;gap:0;border-bottom:1px solid rgba(255,255,255,0.06);">
+            <div style="padding:20px;display:flex;flex-direction:column;align-items:center;justify-content:center;
+                border-right:1px solid rgba(255,255,255,0.06);">
+                ${buildScoreGauge(score, color)}
+                <div style="font-size:11px;color:rgba(255,255,255,0.35);letter-spacing:1px;margin-top:4px;">CIBIL SCORE</div>
+            </div>
+            <div style="padding:20px 24px;display:grid;grid-template-columns:1fr 1fr;gap:12px;align-content:center;">
+                ${[
+                    ['👤 Name', name || 'N/A'],
+                    ['🪪 PAN', summary.pan || 'N/A'],
+                    ['🎂 Date of Birth', summary.dob || 'N/A'],
+                    ['📱 Mobile', summary.mobile || 'N/A'],
+                    ['📋 Report Date', summary.report_date || 'N/A'],
+                    ['🔑 ECN', summary.ecn || 'N/A'],
+                ].map(([k,v]) => `<div>
+                    <div style="font-size:10px;color:rgba(255,255,255,0.35);letter-spacing:1px;margin-bottom:2px;">${k}</div>
+                    <div style="font-size:13px;font-weight:600;color:rgba(255,255,255,0.85);">${v}</div>
+                </div>`).join('')}
+            </div>
+        </div>
+
+        <!-- 4 Pillars -->
+        <div style="padding:20px 24px;border-bottom:1px solid rgba(255,255,255,0.06);">
+            <div style="font-size:11px;letter-spacing:2px;color:rgba(255,255,255,0.35);margin-bottom:12px;">📊 CREDIT HEALTH PILLARS</div>
+            <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;" id="pillar-grid">
+                ${pillarHtml}
+            </div>
+        </div>
+
+        <!-- What this means + Action Items -->
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:0;border-bottom:1px solid rgba(255,255,255,0.06);">
+            ${positives.length ? `<div style="padding:20px 24px;border-right:1px solid rgba(255,255,255,0.06);">
+                <div style="font-size:11px;letter-spacing:2px;color:#18C979;margin-bottom:10px;">✅ WHAT'S WORKING</div>
+                ${posHtml}
+            </div>` : '<div></div>'}
+            <div style="padding:20px 24px;">
+                <div style="font-size:11px;letter-spacing:2px;color:${hasDPD?'#F3A712':'#4FC3F7'};margin-bottom:10px;">${hasDPD?'⚠️ ACTION ITEMS':'💡 TIPS TO IMPROVE'}</div>
+                ${actHtml}
+            </div>
+        </div>
+
+        <!-- Quick Stats Bar -->
+        <div style="padding:16px 24px;display:flex;gap:16px;flex-wrap:wrap;background:rgba(0,0,0,0.2);">
+            <div style="flex:1;text-align:center;min-width:80px;">
+                <div style="font-size:20px;font-weight:800;color:${color};" id="anim-active">0</div>
+                <div style="font-size:10px;color:rgba(255,255,255,0.35);letter-spacing:1px;">ACTIVE</div>
+            </div>
+            <div style="width:1px;background:rgba(255,255,255,0.06);"></div>
+            <div style="flex:1;text-align:center;min-width:80px;">
+                <div style="font-size:20px;font-weight:800;color:rgba(255,255,255,0.5);" id="anim-closed">0</div>
+                <div style="font-size:10px;color:rgba(255,255,255,0.35);letter-spacing:1px;">CLOSED</div>
+            </div>
+            <div style="width:1px;background:rgba(255,255,255,0.06);"></div>
+            <div style="flex:1;text-align:center;min-width:80px;">
+                <div style="font-size:20px;font-weight:800;color:${(summary.enquiries_90d||0)>3?'#F3A712':'rgba(255,255,255,0.7)'};" id="anim-enq">0</div>
+                <div style="font-size:10px;color:rgba(255,255,255,0.35);letter-spacing:1px;">ENQUIRIES</div>
+            </div>
+            <div style="width:1px;background:rgba(255,255,255,0.06);"></div>
+            <div style="flex:1;text-align:center;min-width:80px;">
+                <div style="font-size:16px;font-weight:700;color:rgba(255,255,255,0.7);">₹${((summary.total_outstanding||0)/100000).toFixed(1)}L</div>
+                <div style="font-size:10px;color:rgba(255,255,255,0.35);letter-spacing:1px;">OUTSTANDING</div>
+            </div>
+            <div style="width:1px;background:rgba(255,255,255,0.06);"></div>
+            <div style="flex:1;text-align:center;min-width:80px;">
+                <div style="font-size:16px;font-weight:700;color:rgba(255,255,255,0.7);">₹${((metrics.total_emi||0)/1000).toFixed(0)}K</div>
+                <div style="font-size:10px;color:rgba(255,255,255,0.35);letter-spacing:1px;">MONTHLY EMI</div>
+            </div>
+            <div style="width:1px;background:rgba(255,255,255,0.06);"></div>
+            <div style="flex:1;text-align:center;min-width:80px;">
+                <div style="font-size:16px;font-weight:700;color:rgba(255,255,255,0.7);">${metrics.cc_utilization||'N/A'}</div>
+                <div style="font-size:10px;color:rgba(255,255,255,0.35);letter-spacing:1px;">CC UTIL</div>
+            </div>
+        </div>
     </div>`;
 }
+
+// Context-aware score reaction (no confetti for bad scores)
+function triggerScoreReaction(score, hasDPD, hasSettled) {
+    if (!document.getElementById('confetti-style')) {
+        const s = document.createElement('style'); s.id = 'confetti-style';
+        s.textContent = `@keyframes confettiFall{to{transform:translateY(110vh) rotate(720deg);opacity:0;}}
+        @keyframes warnPulse{0%,100%{box-shadow:0 0 0 0 rgba(243,167,18,0);}50%{box-shadow:0 0 0 12px rgba(243,167,18,0.15);}}
+        @keyframes dangerShake{0%,100%{transform:translateX(0);}20%,60%{transform:translateX(-4px);}40%,80%{transform:translateX(4px);}}`;
+        document.head.appendChild(s);
+    }
+
+    if (score >= 750 && !hasDPD) {
+        // 🎉 Confetti — truly good
+        const colors = ['#18C979','#4FC3F7','#CE93D8','#FFAB40','#80CBC4','#fff'];
+        for (let i = 0; i < 70; i++) {
+            const el = document.createElement('div');
+            const size = 5 + Math.random() * 9;
+            el.style.cssText = `position:fixed;left:${5+Math.random()*90}%;top:-12px;width:${size}px;height:${size}px;
+                background:${colors[Math.floor(Math.random()*colors.length)]};
+                border-radius:${Math.random()>0.4?'50%':'2px'};z-index:99999;pointer-events:none;
+                animation:confettiFall ${1.8+Math.random()*2}s ease-in forwards;
+                animation-delay:${Math.random()*1}s;`;
+            document.body.appendChild(el);
+            setTimeout(() => el.remove(), 4000);
+        }
+    } else if (hasSettled) {
+        // 🔴 Shake — serious issue
+        const card = document.getElementById('cibil-health-card');
+        if (card) card.style.animation = 'dangerShake 0.5s ease 0.5s 2';
+    } else if (hasDPD || score < 700) {
+        // ⚠️ Amber pulse — needs attention
+        const card = document.getElementById('cibil-health-card');
+        if (card) card.style.animation = 'warnPulse 1.2s ease 0.5s 3';
+    }
+
+    // Notification badge
+    const { label, emoji, color } = scoreLabel(score);
+    const el = document.createElement('div');
+    const badgeMsg = hasSettled ? '🔴 Urgent Action Required' : hasDPD ? '⚠️ Issues Detected — See Details' : score >= 750 ? '🏆 Excellent Credit — Congratulations!' : score >= 700 ? '✅ Good Credit — Keep It Up!' : '💡 Credit Can Be Improved';
+    el.style.cssText = `position:fixed;top:74px;right:20px;z-index:99998;max-width:260px;
+        background:linear-gradient(135deg,rgba(12,16,24,0.98),rgba(18,24,36,0.98));
+        border:1px solid ${color}50;border-radius:14px;padding:14px 16px;
+        box-shadow:0 12px 40px rgba(0,0,0,0.5),0 0 0 1px ${color}18;
+        transform:translateX(110%);transition:transform 0.5s cubic-bezier(0.34,1.56,0.64,1);`;
+    el.innerHTML = `
+        <div style="font-size:10px;letter-spacing:2px;color:rgba(255,255,255,0.3);margin-bottom:6px;">MONEYED ANALYSIS</div>
+        <div style="font-size:14px;font-weight:700;color:${color};line-height:1.3;">${badgeMsg}</div>
+        <div style="font-size:11px;color:rgba(255,255,255,0.4);margin-top:5px;">Scroll down for full report →</div>
+        <div style="position:absolute;top:10px;right:12px;font-size:22px;opacity:0.12;">${emoji}</div>`;
+    document.body.appendChild(el);
+    setTimeout(() => { el.style.transform = 'translateX(0)'; }, 900);
+    setTimeout(() => { el.style.transform = 'translateX(110%)'; setTimeout(() => el.remove(), 600); }, 5500);
+}
+
+function buildRiskSummary() { return ''; } // replaced by health card
 
 // Payment history renderer — highlights bad DPD tokens in light red
 function renderPaymentHistory(history) {
@@ -2799,114 +3010,52 @@ if (dropZone && fileInput) {
                     applyCibilTheme(data.score);
                     document.getElementById("home-cibil-val").textContent = data.score || '---';
 
-                    const scoreColor = data.score >= 750 ? '#18C979' : data.score >= 700 ? '#F3A712' : '#dc3545';
-                    const { label: scoreTag } = scoreLabel(data.score);
-                    const overdueColor = summary.total_overdue > 0 ? '#F3A712' : 'inherit';
-
-                    // Score gauge card + stat boxes
-                    document.getElementById("cibil-summary-grid").innerHTML = `
-                        <!-- Score Gauge Card — spans 2 rows on wider screens -->
-                        <div class="cibil-stat-box score-box" style="grid-row:span 2;border:1px solid ${scoreColor}33;
-                            background:linear-gradient(135deg,rgba(0,0,0,0.3),rgba(20,20,30,0.6));
-                            display:flex;flex-direction:column;align-items:center;justify-content:center;padding:20px 12px;">
-                            ${buildScoreGauge(data.score, scoreColor)}
-                            <div style="font-size:11px;letter-spacing:2px;color:rgba(255,255,255,0.35);margin-bottom:4px;">CREDIT SCORE</div>
-                            <div style="font-size:11px;font-weight:600;color:${scoreColor};background:${scoreColor}18;
-                                padding:3px 10px;border-radius:20px;border:1px solid ${scoreColor}44;">${scoreTag}</div>
-                        </div>
-
-                        <div class="cibil-stat-box" style="animation:fadeSlideIn 0.4s ease both 0.1s;">
-                            <p style="font-size:11px;letter-spacing:1px;">👤 NAME</p>
-                            <h3 style="font-size:13px;margin:0;">${summary.name || 'N/A'}</h3>
-                        </div>
-                        <div class="cibil-stat-box" style="animation:fadeSlideIn 0.4s ease both 0.15s;">
-                            <p style="font-size:11px;letter-spacing:1px;">🪪 PAN</p>
-                            <h3 style="font-size:13px;margin:0;font-family:monospace;">${summary.pan || 'N/A'}</h3>
-                        </div>
-                        <div class="cibil-stat-box" style="animation:fadeSlideIn 0.4s ease both 0.2s;">
-                            <p style="font-size:11px;letter-spacing:1px;">🎂 DATE OF BIRTH</p>
-                            <h3 style="font-size:13px;margin:0;">${summary.dob || 'N/A'}</h3>
-                        </div>
-                        <div class="cibil-stat-box" style="animation:fadeSlideIn 0.4s ease both 0.25s;">
-                            <p style="font-size:11px;letter-spacing:1px;">📱 MOBILE</p>
-                            <h3 style="font-size:13px;margin:0;">${summary.mobile || 'N/A'}</h3>
-                        </div>
-
-                        <div class="cibil-stat-box" style="border-color:${scoreColor}44;animation:fadeSlideIn 0.4s ease both 0.3s;">
-                            <p style="font-size:11px;letter-spacing:1px;">🟢 ACTIVE ACCOUNTS</p>
-                            <h3 id="anim-active" style="font-size:1.8rem;margin:0;color:${scoreColor};">0</h3>
-                        </div>
-                        <div class="cibil-stat-box" style="animation:fadeSlideIn 0.4s ease both 0.35s;">
-                            <p style="font-size:11px;letter-spacing:1px;">✅ CLOSED ACCOUNTS</p>
-                            <h3 id="anim-closed" style="font-size:1.8rem;margin:0;">0</h3>
-                        </div>
-                        <div class="cibil-stat-box" style="border-color:#F3A71244;animation:fadeSlideIn 0.4s ease both 0.4s;">
-                            <p style="font-size:11px;letter-spacing:1px;">🔍 ENQUIRIES (90d)</p>
-                            <h3 id="anim-enq" style="font-size:1.8rem;margin:0;color:${(summary.enquiries_90d||0)>3?'#F3A712':'inherit'};">0</h3>
-                        </div>
-
-                        <div class="cibil-stat-box" style="animation:fadeSlideIn 0.4s ease both 0.45s;">
-                            <p style="font-size:11px;letter-spacing:1px;">💰 TOTAL OUTSTANDING</p>
-                            <h3 style="font-size:12px;margin:0;">₹${(summary.total_outstanding||0).toLocaleString('en-IN')}</h3>
-                        </div>
-                        <div class="cibil-stat-box" style="border-color:${summary.total_overdue>0?'#F3A71244':'transparent'};animation:fadeSlideIn 0.4s ease both 0.5s;">
-                            <p style="font-size:11px;letter-spacing:1px;">⚠️ TOTAL OVERDUE</p>
-                            <h3 style="font-size:12px;margin:0;color:${overdueColor};">₹${(summary.total_overdue||0).toLocaleString('en-IN')}</h3>
-                        </div>
-                        <div class="cibil-stat-box" style="animation:fadeSlideIn 0.4s ease both 0.55s;">
-                            <p style="font-size:11px;letter-spacing:1px;">📆 ACTIVE EMI / MO</p>
-                            <h3 style="font-size:12px;margin:0;">₹${(metrics.total_emi||0).toLocaleString('en-IN')}</h3>
-                        </div>
-                        <div class="cibil-stat-box" style="animation:fadeSlideIn 0.4s ease both 0.6s;">
-                            <p style="font-size:11px;letter-spacing:1px;">💳 CC UTILIZATION</p>
-                            <h3 style="font-size:13px;margin:0;">${metrics.cc_utilization || 'N/A'}</h3>
-                        </div>
-                        <div class="cibil-stat-box" style="animation:fadeSlideIn 0.4s ease both 0.65s;">
-                            <p style="font-size:11px;letter-spacing:1px;">📅 OLDEST ACCOUNT</p>
-                            <h3 style="font-size:12px;margin:0;">${metrics.oldest_account || 'N/A'}</h3>
-                        </div>
-                        <div class="cibil-stat-box" style="animation:fadeSlideIn 0.4s ease both 0.7s;">
-                            <p style="font-size:11px;letter-spacing:1px;">📋 REPORT DATE</p>
-                            <h3 style="font-size:12px;margin:0;">${summary.report_date || 'N/A'}</h3>
-                        </div>
-                    `;
-
                     // Inject keyframes once
                     if (!document.getElementById('cibil-anim-style')) {
                         const s = document.createElement('style'); s.id = 'cibil-anim-style';
                         s.textContent = `
-                            @keyframes fadeSlideIn{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
+                            @keyframes fadeSlideIn{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:translateY(0)}}
                             .cibil-stat-box{transition:transform 0.2s,box-shadow 0.2s;}
                             .cibil-stat-box:hover{transform:translateY(-2px);box-shadow:0 8px 24px rgba(0,0,0,0.3);}
                         `;
                         document.head.appendChild(s);
                     }
 
-                    // Animate score gauge text
-                    const gaugeScoreEl = document.getElementById('cibil-gauge-score');
-                    if (gaugeScoreEl) animateCounter(gaugeScoreEl, data.score || 0, 1400);
+                    // Build & inject Credit Health Card into summary grid
+                    const hasDPD = accounts.some(a => {
+                        const h = (a.PaymentHistory||'').split(/\s+/);
+                        return h.some(t => /^(?!000$|STD$)[0-9]{3}$|^(?:WO|SET|DBT|LSS|SMA|SUB|XXX)$/i.test(t)) || a.AmountOverdue > 0;
+                    });
+                    const hasSettled = accounts.some(a =>
+                        /written.?off|settled/i.test(a.PaymentStatus) ||
+                        (a.PaymentHistory||'').split(/\s+/).some(t => /^(?:WO|SET)$/i.test(t))
+                    );
+                    metrics._enq = summary.enquiries_90d || 0;
 
-                    // Animate stat counters
-                    const animActive = document.getElementById('anim-active');
-                    const animClosed = document.getElementById('anim-closed');
-                    const animEnq    = document.getElementById('anim-enq');
-                    if (animActive) animateCounter(animActive, metrics.active_count || 0, 800);
-                    if (animClosed) animateCounter(animClosed, metrics.closed_count || 0, 900);
-                    if (animEnq)    animateCounter(animEnq,    summary.enquiries_90d || 0, 700);
+                    const summaryGrid = document.getElementById("cibil-summary-grid");
+                    summaryGrid.style.display = 'block';
+                    summaryGrid.innerHTML = buildCreditHealthCard(data.score, summary.name, accounts, metrics, summary);
 
-                    // Risk flags summary injected before first table
-                    const riskHtml = buildRiskSummary(accounts, metrics);
-                    const parsedRes = document.getElementById('cibil-parsed-results');
-                    let riskEl = document.getElementById('cibil-risk-flags');
-                    if (!riskEl) { riskEl = document.createElement('div'); riskEl.id = 'cibil-risk-flags'; parsedRes.prepend(riskEl); }
-                    riskEl.innerHTML = riskHtml;
+                    // Animate counters after card renders
+                    requestAnimationFrame(() => {
+                        const gaugeEl = document.getElementById('cibil-gauge-score');
+                        if (gaugeEl) animateCounter(gaugeEl, data.score || 0, 1400);
+                        const animActive = document.getElementById('anim-active');
+                        const animClosed = document.getElementById('anim-closed');
+                        const animEnq    = document.getElementById('anim-enq');
+                        if (animActive) animateCounter(animActive, metrics.active_count || 0, 900);
+                        if (animClosed) animateCounter(animClosed, metrics.closed_count || 0, 1000);
+                        if (animEnq)    animateCounter(animEnq,    summary.enquiries_90d || 0, 800);
 
-                    // Achievement + confetti
-                    setTimeout(() => {
-                        showCibilAchievement(data.score);
-                        if (data.score >= 750) launchConfetti(60);
-                        else if (data.score >= 700) launchConfetti(20);
-                    }, 800);
+                        // Animate pillar bars
+                        document.querySelectorAll('#pillar-grid [data-width]').forEach(bar => {
+                            const w = bar.getAttribute('data-width');
+                            setTimeout(() => { bar.style.width = w + '%'; }, 300);
+                        });
+                    });
+
+                    // Score reaction — context-aware, no confetti for bad scores
+                    setTimeout(() => triggerScoreReaction(data.score, hasDPD, hasSettled), 900);
 
                     // ── Row classifier ──────────────────────────────────────
                     function classifyRow(acc) {
